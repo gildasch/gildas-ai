@@ -62,7 +62,7 @@ func main() {
 	// 	log.Fatal(err)
 	// }
 
-	tensor, err = imageToTensor("out.jpg")
+	tensor, err = imageToTensor("gorge2_299.jpg")
 	if err != nil {
 		fmt.Println(err)
 		return
