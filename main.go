@@ -2,12 +2,19 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/gildasch/gildas-ai/image"
 	"github.com/gildasch/gildas-ai/tensor"
 )
 
 func main() {
+	if len(os.Args) < 2 {
+		fmt.Printf("Usage: %s path/to/image.jpg\n", os.Args[0])
+		return
+	}
+	imageName := os.Args[1]
+
 	model, close, err := tensor.NewModel("myModel", "myTag")
 	if err != nil {
 		fmt.Printf("Error loading saved model: %s\n", err.Error())
@@ -15,7 +22,6 @@ func main() {
 	}
 	defer close()
 
-	imageName := "gorge2.jpg"
 	img, err := image.FromFile(imageName)
 	if err != nil {
 		fmt.Printf("cannot read image %q: %v\n", imageName, err)
