@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/nfnt/resize"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 	"github.com/tensorflow/tensorflow/tensorflow/go/op"
 )
@@ -22,7 +23,7 @@ func main() {
 
 	defer model.Session.Close()
 
-	tensor, err := imageToTensor("gorge2_299.jpg")
+	tensor, err := imageToTensor("gorge2.jpg")
 	if err != nil {
 		fmt.Println("cannot create tensor from image:", err)
 		return
@@ -73,6 +74,8 @@ func imageToTensor(filename string) (*tf.Tensor, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	img = resize.Resize(299, 299, img, resize.NearestNeighbor)
 
 	var image [1][299][299][3]float32
 	for i := 0; i < 299; i++ {
