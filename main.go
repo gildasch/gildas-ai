@@ -1,11 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	goimage "image"
-	"image/color"
-	"image/jpeg"
+	_ "image/jpeg"
 	"io/ioutil"
 	"os"
 
@@ -24,47 +22,9 @@ func main() {
 
 	defer model.Session.Close()
 
-	imageData, _ := ioutil.ReadFile("image.json")
-
-	var image [1][299][299][3]float32
-	err = json.Unmarshal(imageData, &image)
+	tensor, err := imageToTensor("gorge2_299.jpg")
 	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	tensor, _ := tf.NewTensor(image)
-
-	rgba := goimage.NewRGBA(goimage.Rect(0, 0, 299, 299))
-	for i := 0; i < 299; i++ {
-		for j := 0; j < 299; j++ {
-			rgba.Set(i, j, color.RGBA{
-				R: uint8(image[0][i][j][0]*127.5 + 127.5),
-				G: uint8(image[0][i][j][1]*127.5 + 127.5),
-				B: uint8(image[0][i][j][2]*127.5 + 127.5),
-			})
-		}
-	}
-
-	f, err := os.Create("out.jpg")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	err = jpeg.Encode(f, rgba, nil)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	// tensor, _ := tf.NewTensor([1][250][250][3]float32{})
-	// tensor, err := makeTensorFromImage("../pics/gorge3.jpg")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	tensor, err = imageToTensor("gorge2_299.jpg")
-	if err != nil {
-		fmt.Println(err)
+		fmt.Println("cannot create tensor from image:", err)
 		return
 	}
 
@@ -125,9 +85,6 @@ func imageToTensor(filename string) (*tf.Tensor, error) {
 			// return nil, nil
 		}
 	}
-
-	injson, _ := json.Marshal(image)
-	ioutil.WriteFile("image2.json", injson, os.ModePerm)
 
 	return tf.NewTensor(image)
 }
