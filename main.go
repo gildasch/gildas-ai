@@ -17,7 +17,7 @@ func main() {
 	}
 	imageName := os.Args[1]
 
-	model, close, err := tensor.NewModel("myModel", "myTag", "imagenet_class_index.json")
+	model, close, err := tensor.NewModel("resnet", "myTag", "imagenet_class_index.json")
 	if err != nil {
 		fmt.Printf("Error loading saved model: %s\n", err.Error())
 		return

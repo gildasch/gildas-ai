@@ -71,7 +71,7 @@ func (m *Model) Inception(img image.Image) (*Predictions, error) {
 			m.model.Graph.Operation("input_1").Output(0): tensor,
 		},
 		[]tf.Output{
-			m.model.Graph.Operation("predictions/Softmax").Output(0),
+			m.model.Graph.Operation("fc1000/Softmax").Output(0),
 		},
 		nil,
 	)
@@ -98,13 +98,13 @@ func (m *Model) Inception(img image.Image) (*Predictions, error) {
 }
 
 func imageToTensor(img image.Image) (*tf.Tensor, error) {
-	var image [1][299][299][3]float32
-	for i := 0; i < 299; i++ {
-		for j := 0; j < 299; j++ {
+	var image [1][224][224][3]float32
+	for i := 0; i < 224; i++ {
+		for j := 0; j < 224; j++ {
 			r, g, b, _ := img.At(i, j).RGBA()
-			image[0][i][j][0] = convert(r)
-			image[0][i][j][1] = convert(g)
-			image[0][i][j][2] = convert(b)
+			image[0][i][j][0] = convert(b) - 103.939
+			image[0][i][j][1] = convert(g) - 116.779
+			image[0][i][j][2] = convert(r) - 123.68
 		}
 	}
 
@@ -112,5 +112,6 @@ func imageToTensor(img image.Image) (*tf.Tensor, error) {
 }
 
 func convert(value uint32) float32 {
-	return (float32(value>>8) - float32(127.5)) / float32(127.5)
+	// return (float32(value>>8) - float32(127.5)) / float32(127.5)
+	return float32(value >> 8)
 }
