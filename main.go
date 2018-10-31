@@ -10,19 +10,41 @@ import (
 	"github.com/gildasch/gildas-ai/tensor"
 )
 
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Printf("Usage: %s path/to/image.jpg\n", os.Args[0])
-		return
-	}
-	imageName := os.Args[1]
+func usage() {
+	fmt.Printf("Usage: %s [xception|resnet] path/to/image.jpg\n", os.Args[0])
+}
 
-	model, close, err := tensor.NewModel("resnet", "myTag", "imagenet_class_index.json")
-	if err != nil {
-		fmt.Printf("Error loading saved model: %s\n", err.Error())
+func main() {
+	if len(os.Args) < 3 {
+		usage()
 		return
 	}
-	defer close()
+	modelName := os.Args[1]
+	imageName := os.Args[2]
+
+	var model *tensor.Model
+	var err error
+	switch modelName {
+	case "xception":
+		var close func() error
+		model, close, err = tensor.NewModel("myModel", "myTag", "input_1", "predictions/Softmax", tensor.ImageModeTensorflow, "imagenet_class_index.json")
+		if err != nil {
+			fmt.Printf("Error loading saved model: %s\n", err.Error())
+			return
+		}
+		defer close()
+	case "resnet":
+		var close func() error
+		model, close, err = tensor.NewModel("resnet", "myTag", "input_1", "fc1000/Softmax", tensor.ImageModeCaffe, "imagenet_class_index.json")
+		if err != nil {
+			fmt.Printf("Error loading saved model: %s\n", err.Error())
+			return
+		}
+		defer close()
+	default:
+		usage()
+		return
+	}
 
 	var img goimage.Image
 	if strings.HasPrefix(imageName, "https://") || strings.HasPrefix(imageName, "http://") {
