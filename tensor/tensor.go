@@ -2,40 +2,59 @@ package tensor
 
 import (
 	"image"
+	"strconv"
 
 	"github.com/pkg/errors"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 )
 
 type Model struct {
-	model *tf.SavedModel
+	model  *tf.SavedModel
+	labels Labels
 }
 
-func NewModel(modelName, tagName string) (*Model, func() error, error) {
+func NewModel(modelName, tagName, labels string) (*Model, func() error, error) {
 	model, err := tf.LoadSavedModel(modelName, []string{tagName}, nil)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err,
 			"failed to load saved model %q / tag %q", modelName, tagName)
 	}
 
-	return &Model{model: model}, model.Session.Close, nil
+	m := &Model{model: model}
+
+	if labels != "" {
+		l, err := labelsFromFile(labels)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to read labels from file %q", labels)
+		}
+		m.labels = l
+	}
+
+	return m, model.Session.Close, nil
 }
 
-type Predictions []float32
+type Predictions struct {
+	scores []float32
+	labels Labels
+}
 
-func (p Predictions) Best() (i int, v float32) {
-	best, bestV := 0, float32(0.0)
-	for i, v := range p {
-		if bestV < v {
+func (p *Predictions) Best() (class string, score float32) {
+	best, bestScore := 0, float32(0.0)
+	for i, score := range p.scores {
+		if bestScore < score {
 			best = i
-			bestV = v
+			bestScore = score
 		}
 	}
 
-	return best, bestV
+	if label, ok := p.labels.Get(best); ok {
+		return label, bestScore
+	}
+
+	return strconv.Itoa(best), bestScore
 }
 
-func (m *Model) Inception(img image.Image) (Predictions, error) {
+func (m *Model) Inception(img image.Image) (*Predictions, error) {
 	tensor, err := imageToTensor(img)
 	if err != nil {
 		return nil, errors.Wrap(err, "error converting image to tensor")
@@ -67,7 +86,9 @@ func (m *Model) Inception(img image.Image) (Predictions, error) {
 		return nil, errors.New("predictions are empty")
 	}
 
-	return res[0], nil
+	return &Predictions{
+		scores: res[0],
+		labels: m.labels}, nil
 }
 
 func imageToTensor(img image.Image) (*tf.Tensor, error) {
