@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	goimage "image"
 	"os"
+	"strings"
 
 	"github.com/gildasch/gildas-ai/image"
 	"github.com/gildasch/gildas-ai/tensor"
@@ -22,10 +24,19 @@ func main() {
 	}
 	defer close()
 
-	img, err := image.FromFile(imageName)
-	if err != nil {
-		fmt.Printf("cannot read image %q: %v\n", imageName, err)
-		return
+	var img goimage.Image
+	if strings.HasPrefix(imageName, "https://") || strings.HasPrefix(imageName, "http://") {
+		img, err = image.FromURL(imageName)
+		if err != nil {
+			fmt.Printf("cannot read remote image %q: %v\n", imageName, err)
+			return
+		}
+	} else {
+		img, err = image.FromFile(imageName)
+		if err != nil {
+			fmt.Printf("cannot read local image %q: %v\n", imageName, err)
+			return
+		}
 	}
 
 	preds, err := model.Inception(img)

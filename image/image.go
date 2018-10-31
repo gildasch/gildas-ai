@@ -5,9 +5,11 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"net/http"
 	"os"
 
 	"github.com/nfnt/resize"
+	"github.com/pkg/errors"
 )
 
 func FromFile(filename string) (image.Image, error) {
@@ -18,10 +20,26 @@ func FromFile(filename string) (image.Image, error) {
 
 	img, _, err := image.Decode(f)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to decode image")
 	}
 
 	return scaled(img), nil
+}
+
+func FromURL(url string) (image.Image, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get %q", url)
+	}
+	defer resp.Body.Close()
+
+	img, _, err := image.Decode(resp.Body)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode image")
+	}
+
+	return scaled(img), nil
+
 }
 
 const (
