@@ -34,6 +34,9 @@ func main() {
 		return
 	}
 
-	best, bestV := preds.Best()
-	fmt.Printf("Result value: %v (%f)\n", best, bestV)
+	bests := preds.Best(10)
+	fmt.Println("Results:")
+	for _, b := range bests {
+		fmt.Printf("%v (%f)\n", b.Label, b.Score)
+	}
 }

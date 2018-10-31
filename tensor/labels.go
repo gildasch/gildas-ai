@@ -43,9 +43,9 @@ func labelsFromFile(jsonFile string) (Labels, error) {
 	return labels, nil
 }
 
-func (l Labels) Get(i int) (string, bool) {
+func (l Labels) Get(i int) string {
 	if ll, ok := l[i]; ok {
-		return ll.Description, true
+		return ll.Description
 	}
-	return "", false
+	return strconv.Itoa(i)
 }

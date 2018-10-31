@@ -2,7 +2,7 @@ package tensor
 
 import (
 	"image"
-	"strconv"
+	"sort"
 
 	"github.com/pkg/errors"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
@@ -38,20 +38,26 @@ type Predictions struct {
 	labels Labels
 }
 
-func (p *Predictions) Best() (class string, score float32) {
-	best, bestScore := 0, float32(0.0)
+type Prediction struct {
+	Label string
+	Score float32
+}
+
+func (p *Predictions) Best(n int) []Prediction {
+	var ret []Prediction
+
 	for i, score := range p.scores {
-		if bestScore < score {
-			best = i
-			bestScore = score
-		}
+		ret = append(ret, Prediction{
+			Label: p.labels.Get(i),
+			Score: score,
+		})
 	}
 
-	if label, ok := p.labels.Get(best); ok {
-		return label, bestScore
-	}
+	sort.Slice(ret, func(i, j int) bool {
+		return ret[i].Score > ret[j].Score
+	})
 
-	return strconv.Itoa(best), bestScore
+	return ret[:n]
 }
 
 func (m *Model) Inception(img image.Image) (*Predictions, error) {
