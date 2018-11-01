@@ -23,7 +23,7 @@ func FromFile(filename string) (image.Image, error) {
 		return nil, errors.Wrapf(err, "failed to decode image")
 	}
 
-	return scaled(img), nil
+	return img, nil
 }
 
 func FromURL(url string) (image.Image, error) {
@@ -38,15 +38,10 @@ func FromURL(url string) (image.Image, error) {
 		return nil, errors.Wrapf(err, "failed to decode image")
 	}
 
-	return scaled(img), nil
+	return img, nil
 
 }
 
-const (
-	width  = 299
-	height = 299
-)
-
-func scaled(img image.Image) image.Image {
+func Scaled(img image.Image, height, width uint) image.Image {
 	return resize.Resize(width, height, img, resize.NearestNeighbor)
 }

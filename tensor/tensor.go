@@ -1,9 +1,10 @@
 package tensor
 
 import (
-	"image"
+	goimage "image"
 	"sort"
 
+	"github.com/gildasch/gildas-ai/image"
 	"github.com/pkg/errors"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 )
@@ -16,6 +17,7 @@ type Model struct {
 	InputLayer, OutputLayer string
 	ImageMode               string
 	Labels                  string
+	ImageHeight, ImageWidth uint
 }
 
 func (m *Model) Load() (func() error, error) {
@@ -65,7 +67,9 @@ func (p *Predictions) Best(n int) []Prediction {
 	return ret[:n]
 }
 
-func (m *Model) Inception(img image.Image) (*Predictions, error) {
+func (m *Model) Inception(img goimage.Image) (*Predictions, error) {
+	img = image.Scaled(img, m.ImageHeight, m.ImageWidth)
+
 	tensor, err := imageToTensor(img, m.ImageMode)
 	if err != nil {
 		return nil, errors.Wrap(err, "error converting image to tensor")
@@ -107,7 +111,7 @@ const (
 	ImageModeCaffe      = "caffe"
 )
 
-func imageToTensor(img image.Image, imageMode string) (*tf.Tensor, error) {
+func imageToTensor(img goimage.Image, imageMode string) (*tf.Tensor, error) {
 	switch imageMode {
 	case ImageModeTensorflow:
 		return imageToTensorTF(img)
@@ -118,7 +122,7 @@ func imageToTensor(img image.Image, imageMode string) (*tf.Tensor, error) {
 	return nil, errors.Errorf("unknown image mode %q", imageMode)
 }
 
-func imageToTensorTF(img image.Image) (*tf.Tensor, error) {
+func imageToTensorTF(img goimage.Image) (*tf.Tensor, error) {
 	var image [1][299][299][3]float32
 	for i := 0; i < 299; i++ {
 		for j := 0; j < 299; j++ {
@@ -136,7 +140,7 @@ func convertTF(value uint32) float32 {
 	return (float32(value>>8) - float32(127.5)) / float32(127.5)
 }
 
-func imageToTensorCaffe(img image.Image) (*tf.Tensor, error) {
+func imageToTensorCaffe(img goimage.Image) (*tf.Tensor, error) {
 	var image [1][224][224][3]float32
 	for i := 0; i < 224; i++ {
 		for j := 0; j < 224; j++ {

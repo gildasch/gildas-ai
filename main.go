@@ -26,6 +26,8 @@ func main() {
 			OutputLayer: "predictions/Softmax",
 			ImageMode:   tensor.ImageModeTensorflow,
 			Labels:      "imagenet_class_index.json",
+			ImageHeight: 299,
+			ImageWidth:  299,
 		},
 		"resnet": &tensor.Model{
 			ModelName:   "resnet",
@@ -34,6 +36,8 @@ func main() {
 			OutputLayer: "fc1000/Softmax",
 			ImageMode:   tensor.ImageModeCaffe,
 			Labels:      "imagenet_class_index.json",
+			ImageHeight: 224,
+			ImageWidth:  224,
 		},
 	}
 
