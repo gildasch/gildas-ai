@@ -23,7 +23,7 @@ type classifierResult struct {
 	Error       error               `json:"error"`
 }
 
-func ClassifyHandler(classifiers map[string]Classifier) gin.HandlerFunc {
+func ClassifyHandler(classifiers map[string]Classifier, html bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		imageURL := strings.TrimPrefix(c.Param("imageurl"), "/")
 
@@ -54,6 +54,14 @@ func ClassifyHandler(classifiers map[string]Classifier) gin.HandlerFunc {
 				Predictions: preds.Best(10),
 				Timing:      elapsed.String(),
 			})
+		}
+
+		if html {
+			c.HTML(http.StatusOK, "predictions.html", gin.H{
+				"imageURL": imageURL,
+				"results":  resp,
+			})
+			return
 		}
 
 		c.JSON(http.StatusOK, resp)
