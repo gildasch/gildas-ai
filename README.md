@@ -6,3 +6,8 @@ interface, a JSON API and the command line.
 ![drake](drake.png)
 
 ![sport car](sportcar.png)
+
+Model used for object detection on ImageNet:
+
+- Keras Xception from https://modeldepot.io/harshsikka/keras-xception
+- Keras ResNet50 from https://modeldepot.io/tonyshih/keras-resnet50
