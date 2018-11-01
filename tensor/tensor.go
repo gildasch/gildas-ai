@@ -123,9 +123,9 @@ func imageToTensorTF(img image.Image) (*tf.Tensor, error) {
 	for i := 0; i < 299; i++ {
 		for j := 0; j < 299; j++ {
 			r, g, b, _ := img.At(i, j).RGBA()
-			image[0][i][j][0] = convertTF(r)
-			image[0][i][j][1] = convertTF(g)
-			image[0][i][j][2] = convertTF(b)
+			image[0][j][i][0] = convertTF(r)
+			image[0][j][i][1] = convertTF(g)
+			image[0][j][i][2] = convertTF(b)
 		}
 	}
 
@@ -141,9 +141,9 @@ func imageToTensorCaffe(img image.Image) (*tf.Tensor, error) {
 	for i := 0; i < 224; i++ {
 		for j := 0; j < 224; j++ {
 			r, g, b, _ := img.At(i, j).RGBA()
-			image[0][i][j][0] = convertCaffe(b) - 103.939
-			image[0][i][j][1] = convertCaffe(g) - 116.779
-			image[0][i][j][2] = convertCaffe(r) - 123.68
+			image[0][j][i][0] = convertCaffe(b) - 103.939
+			image[0][j][i][1] = convertCaffe(g) - 116.779
+			image[0][j][i][2] = convertCaffe(r) - 123.68
 		}
 	}
 
