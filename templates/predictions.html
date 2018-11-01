@@ -8,7 +8,7 @@
             {{ range $r := .results }}
             <div>
                 <h3>{{ $r.Classifier }}</h3>
-                <p>In {{ $r.Timing }}</p>
+                <p>in {{ $r.Timing }}</p>
                 <ul>
                     {{ range $p := $r.Predictions }}
                     <li><strong>{{ $p.Label }}</strong>: {{ $p.Score }}</li>
