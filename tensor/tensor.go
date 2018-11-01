@@ -44,8 +44,8 @@ type Predictions struct {
 }
 
 type Prediction struct {
-	Label string
-	Score float32
+	Label string  `json:"label"`
+	Score float32 `json:"score"`
 }
 
 func (p *Predictions) Best(n int) []Prediction {

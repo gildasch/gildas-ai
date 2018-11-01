@@ -6,22 +6,18 @@ import (
 	"os"
 	"strings"
 
+	"github.com/gildasch/gildas-ai/api"
 	"github.com/gildasch/gildas-ai/image"
 	"github.com/gildasch/gildas-ai/tensor"
+	"github.com/gin-gonic/gin"
 )
 
 func usage() {
 	fmt.Printf("Usage: %s [xception|resnet] path/to/image.jpg\n", os.Args[0])
+	fmt.Printf("Usage: %s web\n", os.Args[0])
 }
 
 func main() {
-	if len(os.Args) < 3 {
-		usage()
-		return
-	}
-	modelName := os.Args[1]
-	imageName := os.Args[2]
-
 	models := map[string]*tensor.Model{
 		"xception": &tensor.Model{
 			ModelName:   "myModel",
@@ -40,6 +36,32 @@ func main() {
 			Labels:      "imagenet_class_index.json",
 		},
 	}
+
+	if len(os.Args) >= 2 && os.Args[1] == "web" {
+		classifiers := map[string]api.Classifier{}
+		for name, m := range models {
+			close, err := m.Load()
+			if err != nil {
+				fmt.Printf("Error loading saved model: %s\n", err.Error())
+				continue
+			}
+			defer close()
+
+			classifiers[name] = m
+		}
+
+		app := gin.Default()
+		app.GET("/*imageurl", api.ClassifyHandler(classifiers))
+
+		app.Run()
+	}
+
+	if len(os.Args) < 3 {
+		usage()
+		return
+	}
+	modelName := os.Args[1]
+	imageName := os.Args[2]
 
 	model, ok := models[modelName]
 	if !ok {
