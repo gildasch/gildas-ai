@@ -9,35 +9,33 @@ import (
 )
 
 type Model struct {
-	model                   *tf.SavedModel
-	labels                  Labels
-	inputLayer, outputLayer string
-	imageMode               string
+	model  *tf.SavedModel
+	labels Labels
+
+	ModelName, TagName      string
+	InputLayer, OutputLayer string
+	ImageMode               string
+	Labels                  string
 }
 
-func NewModel(modelName, tagName, inputLayer, outputLayer, imageMode, labels string) (*Model, func() error, error) {
-	model, err := tf.LoadSavedModel(modelName, []string{tagName}, nil)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err,
-			"failed to load saved model %q / tag %q", modelName, tagName)
-	}
-
-	m := &Model{
-		model:       model,
-		inputLayer:  inputLayer,
-		outputLayer: outputLayer,
-		imageMode:   imageMode,
-	}
-
-	if labels != "" {
-		l, err := labelsFromFile(labels)
+func (m *Model) Load() (func() error, error) {
+	if m.Labels != "" {
+		l, err := labelsFromFile(m.Labels)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed to read labels from file %q", labels)
+			return nil, errors.Wrapf(err, "failed to read labels from file %q", m.Labels)
 		}
 		m.labels = l
 	}
 
-	return m, model.Session.Close, nil
+	model, err := tf.LoadSavedModel(m.ModelName, []string{m.TagName}, nil)
+	if err != nil {
+		return nil, errors.Wrapf(err,
+			"failed to load saved model %q / tag %q", m.ModelName, m.TagName)
+	}
+
+	m.model = model
+
+	return model.Session.Close, nil
 }
 
 type Predictions struct {
@@ -68,17 +66,17 @@ func (p *Predictions) Best(n int) []Prediction {
 }
 
 func (m *Model) Inception(img image.Image) (*Predictions, error) {
-	tensor, err := imageToTensor(img, m.imageMode)
+	tensor, err := imageToTensor(img, m.ImageMode)
 	if err != nil {
 		return nil, errors.Wrap(err, "error converting image to tensor")
 	}
 
 	result, err := m.model.Session.Run(
 		map[tf.Output]*tf.Tensor{
-			m.model.Graph.Operation(m.inputLayer).Output(0): tensor,
+			m.model.Graph.Operation(m.InputLayer).Output(0): tensor,
 		},
 		[]tf.Output{
-			m.model.Graph.Operation(m.outputLayer).Output(0),
+			m.model.Graph.Operation(m.OutputLayer).Output(0),
 		},
 		nil,
 	)

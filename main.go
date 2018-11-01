@@ -22,29 +22,36 @@ func main() {
 	modelName := os.Args[1]
 	imageName := os.Args[2]
 
-	var model *tensor.Model
-	var err error
-	switch modelName {
-	case "xception":
-		var close func() error
-		model, close, err = tensor.NewModel("myModel", "myTag", "input_1", "predictions/Softmax", tensor.ImageModeTensorflow, "imagenet_class_index.json")
-		if err != nil {
-			fmt.Printf("Error loading saved model: %s\n", err.Error())
-			return
-		}
-		defer close()
-	case "resnet":
-		var close func() error
-		model, close, err = tensor.NewModel("resnet", "myTag", "input_1", "fc1000/Softmax", tensor.ImageModeCaffe, "imagenet_class_index.json")
-		if err != nil {
-			fmt.Printf("Error loading saved model: %s\n", err.Error())
-			return
-		}
-		defer close()
-	default:
+	models := map[string]*tensor.Model{
+		"xception": &tensor.Model{
+			ModelName:   "myModel",
+			TagName:     "myTag",
+			InputLayer:  "input_1",
+			OutputLayer: "predictions/Softmax",
+			ImageMode:   tensor.ImageModeTensorflow,
+			Labels:      "imagenet_class_index.json",
+		},
+		"resnet": &tensor.Model{
+			ModelName:   "resnet",
+			TagName:     "myTag",
+			InputLayer:  "input_1",
+			OutputLayer: "fc1000/Softmax",
+			ImageMode:   tensor.ImageModeCaffe,
+			Labels:      "imagenet_class_index.json",
+		},
+	}
+
+	model, ok := models[modelName]
+	if !ok {
 		usage()
 		return
 	}
+	close, err := model.Load()
+	if err != nil {
+		fmt.Printf("Error loading saved model: %s\n", err.Error())
+		return
+	}
+	defer close()
 
 	var img goimage.Image
 	if strings.HasPrefix(imageName, "https://") || strings.HasPrefix(imageName, "http://") {
