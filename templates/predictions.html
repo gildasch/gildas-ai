@@ -1,21 +1,25 @@
 <html>
-    <head>
-    </head>
-    <body>
-        <div style="text-align:center;"><img src="{{ .imageURL }}" /></div>
+  <head>
+  </head>
+  <body>
+    <form action="/" style="text-align:center;">
+      <input type="text" name="imageurl" style="width:50%;min-width:500px;" />
+    </form>
 
-        <div style="display: flex;justify-content:center;">
-            {{ range $r := .results }}
-            <div>
-                <h3>{{ $r.Classifier }}</h3>
-                <p>in {{ $r.Timing }}</p>
-                <ul>
-                    {{ range $p := $r.Predictions }}
-                    <li><strong>{{ $p.Label }}</strong>: {{ $p.Score }}</li>
-                    {{ end }}
-                </ul>
-            </div>
-            {{ end }}
-        </div>
-    </body>
+    <div style="text-align:center;"><img src="{{ .imageURL }}" style="max-width:50%;" /></div>
+
+    <div style="display: flex;justify-content:center;">
+      {{ range $r := .results }}
+      <div>
+        <h3>{{ $r.Classifier }}</h3>
+        <p>in {{ $r.Timing }}</p>
+        <ul>
+          {{ range $p := $r.Predictions }}
+          <li><strong>{{ $p.Label }}</strong>: {{ $p.Score }}</li>
+          {{ end }}
+        </ul>
+      </div>
+      {{ end }}
+    </div>
+  </body>
 </html>

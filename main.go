@@ -56,8 +56,8 @@ func main() {
 
 		app := gin.Default()
 		app.LoadHTMLFiles("templates/predictions.html")
-		app.GET("api/*imageurl", api.ClassifyHandler(classifiers, false))
-		app.GET("h/*imageurl", api.ClassifyHandler(classifiers, true))
+		app.GET("api", api.ClassifyHandler(classifiers, false))
+		app.GET("/", api.ClassifyHandler(classifiers, true))
 
 		app.Run()
 	}

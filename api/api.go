@@ -25,7 +25,7 @@ type classifierResult struct {
 
 func ClassifyHandler(classifiers map[string]Classifier, html bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		imageURL := strings.TrimPrefix(c.Param("imageurl"), "/")
+		imageURL := strings.TrimPrefix(c.Query("imageurl"), "/")
 
 		img, err := image.FromURL(imageURL)
 		if err != nil {
