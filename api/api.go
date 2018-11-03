@@ -27,6 +27,11 @@ func ClassifyHandler(classifiers map[string]Classifier, html bool) gin.HandlerFu
 	return func(c *gin.Context) {
 		imageURL := strings.TrimPrefix(c.Query("imageurl"), "/")
 
+		if imageURL == "" {
+			c.HTML(http.StatusOK, "predictions.html", nil)
+			return
+		}
+
 		img, err := image.FromURL(imageURL)
 		if err != nil {
 			c.AbortWithStatusJSON(
