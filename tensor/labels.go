@@ -14,7 +14,7 @@ type LabelItem struct {
 	Name, Description string
 }
 
-func labelsFromFile(jsonFile string) (Labels, error) {
+func labelsFromFile(jsonFile string, indexCorrection int) (Labels, error) {
 	j, err := ioutil.ReadFile(jsonFile)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read file %q", jsonFile)
@@ -33,6 +33,8 @@ func labelsFromFile(jsonFile string) (Labels, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "the labels file has a bad index %q", i)
 		}
+
+		ii -= indexCorrection
 
 		labels[ii] = LabelItem{
 			Name:        ll[0],

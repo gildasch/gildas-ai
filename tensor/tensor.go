@@ -18,11 +18,12 @@ type Model struct {
 	ImageMode               string
 	Labels                  string
 	ImageHeight, ImageWidth uint
+	IndexCorrection         int
 }
 
 func (m *Model) Load() (func() error, error) {
 	if m.Labels != "" {
-		l, err := labelsFromFile(m.Labels)
+		l, err := labelsFromFile(m.Labels, m.IndexCorrection)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to read labels from file %q", m.Labels)
 		}
@@ -107,14 +108,17 @@ func (m *Model) Inception(img goimage.Image) (*Predictions, error) {
 }
 
 const (
-	ImageModeTensorflow = "tf"
-	ImageModeCaffe      = "caffe"
+	ImageModeTensorflow         = "tf"
+	ImageModeTensorflowPositive = "tf-pos"
+	ImageModeCaffe              = "caffe"
 )
 
 func imageToTensor(img goimage.Image, imageMode string, imageHeight, imageWidth uint) (*tf.Tensor, error) {
 	switch imageMode {
 	case ImageModeTensorflow:
 		return imageToTensorTF(img, imageHeight, imageWidth)
+	case ImageModeTensorflowPositive:
+		return imageToTensorTFPositive(img, imageHeight, imageWidth)
 	case ImageModeCaffe:
 		return imageToTensorCaffe(img, imageHeight, imageWidth)
 	}
@@ -143,6 +147,29 @@ func imageToTensorTF(img goimage.Image, imageHeight, imageWidth uint) (*tf.Tenso
 
 func convertTF(value uint32) float32 {
 	return (float32(value>>8) - float32(127.5)) / float32(127.5)
+}
+
+func imageToTensorTFPositive(img goimage.Image, imageHeight, imageWidth uint) (*tf.Tensor, error) {
+	var image [1][][][3]float32
+
+	for j := 0; j < int(imageHeight); j++ {
+		image[0] = append(image[0], make([][3]float32, imageWidth))
+	}
+
+	for i := 0; i < int(imageWidth); i++ {
+		for j := 0; j < int(imageHeight); j++ {
+			r, g, b, _ := img.At(i, j).RGBA()
+			image[0][j][i][0] = convertTFPositive(r)
+			image[0][j][i][1] = convertTFPositive(g)
+			image[0][j][i][2] = convertTFPositive(b)
+		}
+	}
+
+	return tf.NewTensor(image)
+}
+
+func convertTFPositive(value uint32) float32 {
+	return float32(value>>8) / float32(255)
 }
 
 func imageToTensorCaffe(img goimage.Image, imageHeight, imageWidth uint) (*tf.Tensor, error) {

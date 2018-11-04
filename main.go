@@ -49,6 +49,17 @@ func main() {
 			ImageHeight: 224,
 			ImageWidth:  224,
 		},
+		"pnasnet": &tensor.Model{
+			ModelName:       "pnasnet",
+			TagName:         "myTag",
+			InputLayer:      "module/hub_input/images",
+			OutputLayer:     "module/final_layer/predictions",
+			ImageMode:       tensor.ImageModeTensorflowPositive,
+			Labels:          "imagenet_class_index.json",
+			ImageHeight:     331,
+			ImageWidth:      331,
+			IndexCorrection: -1,
+		},
 	}
 
 	if len(os.Args) >= 2 && os.Args[1] == "web" {
