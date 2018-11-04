@@ -114,35 +114,23 @@ const (
 func imageToTensor(img goimage.Image, imageMode string, imageHeight, imageWidth uint) (*tf.Tensor, error) {
 	switch imageMode {
 	case ImageModeTensorflow:
-		if imageHeight == 224 {
-			return imageToTensorTF224(img)
-		}
-		return imageToTensorTF(img)
+		return imageToTensorTF(img, imageHeight, imageWidth)
 	case ImageModeCaffe:
-		return imageToTensorCaffe(img)
+		return imageToTensorCaffe(img, imageHeight, imageWidth)
 	}
 
 	return nil, errors.Errorf("unknown image mode %q", imageMode)
 }
 
-func imageToTensorTF(img goimage.Image) (*tf.Tensor, error) {
-	var image [1][299][299][3]float32
-	for i := 0; i < 299; i++ {
-		for j := 0; j < 299; j++ {
-			r, g, b, _ := img.At(i, j).RGBA()
-			image[0][j][i][0] = convertTF(r)
-			image[0][j][i][1] = convertTF(g)
-			image[0][j][i][2] = convertTF(b)
-		}
+func imageToTensorTF(img goimage.Image, imageHeight, imageWidth uint) (*tf.Tensor, error) {
+	var image [1][][][3]float32
+
+	for j := 0; j < int(imageHeight); j++ {
+		image[0] = append(image[0], make([][3]float32, imageWidth))
 	}
 
-	return tf.NewTensor(image)
-}
-
-func imageToTensorTF224(img goimage.Image) (*tf.Tensor, error) {
-	var image [1][224][224][3]float32
-	for i := 0; i < 224; i++ {
-		for j := 0; j < 224; j++ {
+	for i := 0; i < int(imageWidth); i++ {
+		for j := 0; j < int(imageHeight); j++ {
 			r, g, b, _ := img.At(i, j).RGBA()
 			image[0][j][i][0] = convertTF(r)
 			image[0][j][i][1] = convertTF(g)
@@ -157,10 +145,15 @@ func convertTF(value uint32) float32 {
 	return (float32(value>>8) - float32(127.5)) / float32(127.5)
 }
 
-func imageToTensorCaffe(img goimage.Image) (*tf.Tensor, error) {
-	var image [1][224][224][3]float32
-	for i := 0; i < 224; i++ {
-		for j := 0; j < 224; j++ {
+func imageToTensorCaffe(img goimage.Image, imageHeight, imageWidth uint) (*tf.Tensor, error) {
+	var image [1][][][3]float32
+
+	for j := 0; j < int(imageHeight); j++ {
+		image[0] = append(image[0], make([][3]float32, imageWidth))
+	}
+
+	for i := 0; i < int(imageWidth); i++ {
+		for j := 0; j < int(imageHeight); j++ {
 			r, g, b, _ := img.At(i, j).RGBA()
 			image[0][j][i][0] = convertCaffe(b) - 103.939
 			image[0][j][i][1] = convertCaffe(g) - 116.779
