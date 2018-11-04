@@ -39,6 +39,16 @@ func main() {
 			ImageHeight: 224,
 			ImageWidth:  224,
 		},
+		"nasnet": &tensor.Model{
+			ModelName:   "nasnet-mobile",
+			TagName:     "myTag",
+			InputLayer:  "input_1",
+			OutputLayer: "predictions/Softmax",
+			ImageMode:   tensor.ImageModeTensorflow,
+			Labels:      "imagenet_class_index.json",
+			ImageHeight: 224,
+			ImageWidth:  224,
+		},
 	}
 
 	if len(os.Args) >= 2 && os.Args[1] == "web" {

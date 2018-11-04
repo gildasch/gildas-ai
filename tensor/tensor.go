@@ -70,7 +70,7 @@ func (p *Predictions) Best(n int) []Prediction {
 func (m *Model) Inception(img goimage.Image) (*Predictions, error) {
 	img = image.Scaled(img, m.ImageHeight, m.ImageWidth)
 
-	tensor, err := imageToTensor(img, m.ImageMode)
+	tensor, err := imageToTensor(img, m.ImageMode, m.ImageHeight, m.ImageWidth)
 	if err != nil {
 		return nil, errors.Wrap(err, "error converting image to tensor")
 	}
@@ -111,9 +111,12 @@ const (
 	ImageModeCaffe      = "caffe"
 )
 
-func imageToTensor(img goimage.Image, imageMode string) (*tf.Tensor, error) {
+func imageToTensor(img goimage.Image, imageMode string, imageHeight, imageWidth uint) (*tf.Tensor, error) {
 	switch imageMode {
 	case ImageModeTensorflow:
+		if imageHeight == 224 {
+			return imageToTensorTF224(img)
+		}
 		return imageToTensorTF(img)
 	case ImageModeCaffe:
 		return imageToTensorCaffe(img)
@@ -126,6 +129,20 @@ func imageToTensorTF(img goimage.Image) (*tf.Tensor, error) {
 	var image [1][299][299][3]float32
 	for i := 0; i < 299; i++ {
 		for j := 0; j < 299; j++ {
+			r, g, b, _ := img.At(i, j).RGBA()
+			image[0][j][i][0] = convertTF(r)
+			image[0][j][i][1] = convertTF(g)
+			image[0][j][i][2] = convertTF(b)
+		}
+	}
+
+	return tf.NewTensor(image)
+}
+
+func imageToTensorTF224(img goimage.Image) (*tf.Tensor, error) {
+	var image [1][224][224][3]float32
+	for i := 0; i < 224; i++ {
+		for j := 0; j < 224; j++ {
 			r, g, b, _ := img.At(i, j).RGBA()
 			image[0][j][i][0] = convertTF(r)
 			image[0][j][i][1] = convertTF(g)

@@ -24,3 +24,4 @@ Model used for object detection on ImageNet:
 
 - Keras Xception from https://modeldepot.io/harshsikka/keras-xception
 - Keras ResNet50 from https://modeldepot.io/tonyshih/keras-resnet50
+- Keras NASNet Mobile from https://modeldepot.io/jbrandowski/nasnet-mobile
