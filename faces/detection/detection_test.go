@@ -1,6 +1,7 @@
 package detection
 
 import (
+	"fmt"
 	goimage "image"
 	"image/color"
 	"image/draw"
@@ -48,6 +49,19 @@ func TestDetection(t *testing.T) {
 		assert.Len(t, actual.Scores, tc.expectedNumDetections)
 		assert.Len(t, actual.Classes, tc.expectedNumDetections)
 		assert.Equal(t, tc.expectedNumDetections, actual.NumDetections)
+	}
+}
+
+var cutFile = 1
+
+func saveCutImages(img goimage.Image, detections Detections) {
+	for _, box := range detections.Boxes {
+		out := goimage.NewRGBA(box)
+		draw.Draw(out, box, img, box.Min, draw.Src)
+
+		outf, _ := os.Create(fmt.Sprintf("%d.jpg", cutFile))
+		jpeg.Encode(outf, out, nil)
+		cutFile++
 	}
 }
 
