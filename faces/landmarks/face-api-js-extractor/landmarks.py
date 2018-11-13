@@ -1,271 +1,160 @@
 import tensorflow as tf
 import json
+import numpy
 
-inp = [0]
-dense0 = json.loads("""{
-  "conv0": {
-    "filters": {
-      "isDisposedInternal": false,
-      "shape": [
-        3,
-        3,
-        3,
-        32
-      ],
-      "dtype": "float32",
-      "size": 864,
-      "strides": [
-        288,
-        96,
-        32
-      ],
-      "dataId": null,
-      "id": 98,
-      "rankType": "4"
-    },
-    "bias": {
-      "isDisposedInternal": false,
-      "shape": [
-        32
-      ],
-      "dtype": "float32",
-      "size": 32,
-      "strides": [],
-      "dataId": null,
-      "id": 99,
-      "rankType": "1"
-    }
-  },
-  "conv1": {
-    "depthwise_filter": {
-      "isDisposedInternal": false,
-      "shape": [
-        3,
-        3,
-        32,
-        1
-      ],
-      "dtype": "float32",
-      "size": 288,
-      "strides": [
-        96,
-        32,
-        1
-      ],
-      "dataId": null,
-      "id": 100,
-      "rankType": "4"
-    },
-    "pointwise_filter": {
-      "isDisposedInternal": false,
-      "shape": [
-        1,
-        1,
-        32,
-        32
-      ],
-      "dtype": "float32",
-      "size": 1024,
-      "strides": [
-        1024,
-        1024,
-        32
-      ],
-      "dataId": null,
-      "id": 101,
-      "rankType": "4"
-    },
-    "bias": {
-      "isDisposedInternal": false,
-      "shape": [
-        32
-      ],
-      "dtype": "float32",
-      "size": 32,
-      "strides": [],
-      "dataId": null,
-      "id": 102,
-      "rankType": "1"
-    }
-  },
-  "conv2": {
-    "depthwise_filter": {
-      "isDisposedInternal": false,
-      "shape": [
-        3,
-        3,
-        32,
-        1
-      ],
-      "dtype": "float32",
-      "size": 288,
-      "strides": [
-        96,
-        32,
-        1
-      ],
-      "dataId": null,
-      "id": 103,
-      "rankType": "4"
-    },
-    "pointwise_filter": {
-      "isDisposedInternal": false,
-      "shape": [
-        1,
-        1,
-        32,
-        32
-      ],
-      "dtype": "float32",
-      "size": 1024,
-      "strides": [
-        1024,
-        1024,
-        32
-      ],
-      "dataId": null,
-      "id": 104,
-      "rankType": "4"
-    },
-    "bias": {
-      "isDisposedInternal": false,
-      "shape": [
-        32
-      ],
-      "dtype": "float32",
-      "size": 32,
-      "strides": [],
-      "dataId": null,
-      "id": 105,
-      "rankType": "1"
-    }
-  },
-  "conv3": {
-    "depthwise_filter": {
-      "isDisposedInternal": false,
-      "shape": [
-        3,
-        3,
-        32,
-        1
-      ],
-      "dtype": "float32",
-      "size": 288,
-      "strides": [
-        96,
-        32,
-        1
-      ],
-      "dataId": null,
-      "id": 106,
-      "rankType": "4"
-    },
-    "pointwise_filter": {
-      "isDisposedInternal": false,
-      "shape": [
-        1,
-        1,
-        32,
-        32
-      ],
-      "dtype": "float32",
-      "size": 1024,
-      "strides": [
-        1024,
-        1024,
-        32
-      ],
-      "dataId": null,
-      "id": 107,
-      "rankType": "4"
-    },
-    "bias": {
-      "isDisposedInternal": false,
-      "shape": [
-        32
-      ],
-      "dtype": "float32",
-      "size": 32,
-      "strides": [],
-      "dataId": null,
-      "id": 108,
-      "rankType": "1"
-    }
-  }
-}""")
+params = {}
 
-out1 = tf.math.add(
-    tf.nn.conv2d(inp, dense0["conv0"]["filters"], [2,2], 'SAME'),
-    dense0["conv0"]["bias"])
+def dict2Array(d, shape, i=0):
+    if len(shape) == 0:
+        return d[str(i)]
 
-out2 = tf.math.add(
-    tf.nn.separableConv2d(
-        out1, dense0["conv1"]["depthwise_filter"], dense0["conv1"]["pointwise_filter"],
-        [1,1], 'SAME'),
-    dense0["conv1"]["bias"])
+    ret = []
 
-out3 = tf.math.add(
-    tf.nn.separableConv2d(
-        tf.nn.relu(tf.math.add(out1, out2)),
-        dense0["conv2"]["depthwise_filter"], dense0["conv2"]["pointwise_filter"],
-        [1,1], 'SAME'),
-    dense0["conv2"]["bias"])
+    if len(shape) == 1:
+        childLength = 1
+        total = shape[0]
+    else:
+        childLength = 1
+        for l in shape[1:]:
+            childLength = childLength * l
+        total = childLength * shape[0]
 
-out4 = tf.math.add(
-    tf.nn.separableConv2d(
-        tf.nn.relu(tf.math.add(out1, tf.math.add(out2, out3))),
-        dense0["conv3"]["depthwise_filter"], dense0["conv3"]["pointwise_filter"],
-        [1,1], 'SAME'),
-    dense0["conv3"]["bias"])
+    for x in range(i, i+total, childLength):
+        ret.append(dict2Array(d, shape[1:], x))
 
-outFinal = tf.nn.relu(tf.math.add(out1, tf.math.add(out2, tf.math.add(out3, out4))))
+    return ret
 
+def load(filename, shape, dtype):
+    with open(filename, 'r') as f:
+        s = f.read()
+        d = eval(s)
+    a = dict2Array(d, shape)
+    return tf.convert_to_tensor(a, dtype=dtype)
 
+normalized = load("normalized.js", [1,112,112,3], tf.float32)
 
+params["dense0"] = {}
+params["dense0"]["conv0"] = {}
+params["dense0"]["conv0"]["filters"] = load("dense0.conv0.filters.js", [3,3,3,32], tf.float32)
+params["dense0"]["conv0"]["bias"] = load("dense0.conv0.bias.js", [32], tf.float32)
+params["dense0"]["conv1"] = {}
+params["dense0"]["conv1"]["depthwise_filter"] = load("dense0.conv1.depthwise_filter.js", [3,3,32,1], tf.float32)
+params["dense0"]["conv1"]["pointwise_filter"] = load("dense0.conv1.pointwise_filter.js", [1,1,32,32], tf.float32)
+params["dense0"]["conv1"]["bias"] = load("dense0.conv1.bias.js", [32], tf.float32)
+params["dense0"]["conv2"] = {}
+params["dense0"]["conv2"]["depthwise_filter"] = load("dense0.conv2.depthwise_filter.js", [3,3,32,1], tf.float32)
+params["dense0"]["conv2"]["pointwise_filter"] = load("dense0.conv2.pointwise_filter.js", [1,1,32,32], tf.float32)
+params["dense0"]["conv2"]["bias"] = load("dense0.conv2.bias.js", [32], tf.float32)
+params["dense0"]["conv3"] = {}
+params["dense0"]["conv3"]["depthwise_filter"] = load("dense0.conv3.depthwise_filter.js", [3,3,32,1], tf.float32)
+params["dense0"]["conv3"]["pointwise_filter"] = load("dense0.conv3.pointwise_filter.js", [1,1,32,32], tf.float32)
+params["dense0"]["conv3"]["bias"] = load("dense0.conv3.bias.js", [32], tf.float32)
 
+params["dense1"] = {}
+params["dense1"]["conv0"] = {}
+params["dense1"]["conv0"]["depthwise_filter"] = load("dense1.conv0.depthwise_filter.js", [3,3,32,1], tf.float32)
+params["dense1"]["conv0"]["pointwise_filter"] = load("dense1.conv0.pointwise_filter.js", [1,1,32,64], tf.float32)
+params["dense1"]["conv0"]["bias"] = load("dense1.conv0.bias.js", [64], tf.float32)
+params["dense1"]["conv1"] = {}
+params["dense1"]["conv1"]["depthwise_filter"] = load("dense1.conv1.depthwise_filter.js", [3,3,64,1], tf.float32)
+params["dense1"]["conv1"]["pointwise_filter"] = load("dense1.conv1.pointwise_filter.js", [1,1,64,64], tf.float32)
+params["dense1"]["conv1"]["bias"] = load("dense1.conv1.bias.js", [64], tf.float32)
+params["dense1"]["conv2"] = {}
+params["dense1"]["conv2"]["depthwise_filter"] = load("dense1.conv2.depthwise_filter.js", [3,3,64,1], tf.float32)
+params["dense1"]["conv2"]["pointwise_filter"] = load("dense1.conv2.pointwise_filter.js", [1,1,64,64], tf.float32)
+params["dense1"]["conv2"]["bias"] = load("dense1.conv2.bias.js", [64], tf.float32)
+params["dense1"]["conv3"] = {}
+params["dense1"]["conv3"]["depthwise_filter"] = load("dense1.conv3.depthwise_filter.js", [3,3,64,1], tf.float32)
+params["dense1"]["conv3"]["pointwise_filter"] = load("dense1.conv3.pointwise_filter.js", [1,1,64,64], tf.float32)
+params["dense1"]["conv3"]["bias"] = load("dense1.conv3.bias.js", [64], tf.float32)
 
+params["dense2"] = {}
+params["dense2"]["conv0"] = {}
+params["dense2"]["conv0"]["depthwise_filter"] = load("dense2.conv0.depthwise_filter.js", [3,3,64,1], tf.float32)
+params["dense2"]["conv0"]["pointwise_filter"] = load("dense2.conv0.pointwise_filter.js", [1,1,64,128], tf.float32)
+params["dense2"]["conv0"]["bias"] = load("dense2.conv0.bias.js", [128], tf.float32)
+params["dense2"]["conv1"] = {}
+params["dense2"]["conv1"]["depthwise_filter"] = load("dense2.conv1.depthwise_filter.js", [3,3,128,1], tf.float32)
+params["dense2"]["conv1"]["pointwise_filter"] = load("dense2.conv1.pointwise_filter.js", [1,1,128,128], tf.float32)
+params["dense2"]["conv1"]["bias"] = load("dense2.conv1.bias.js", [128], tf.float32)
+params["dense2"]["conv2"] = {}
+params["dense2"]["conv2"]["depthwise_filter"] = load("dense2.conv2.depthwise_filter.js", [3,3,128,1], tf.float32)
+params["dense2"]["conv2"]["pointwise_filter"] = load("dense2.conv2.pointwise_filter.js", [1,1,128,128], tf.float32)
+params["dense2"]["conv2"]["bias"] = load("dense2.conv2.bias.js", [128], tf.float32)
+params["dense2"]["conv3"] = {}
+params["dense2"]["conv3"]["depthwise_filter"] = load("dense2.conv3.depthwise_filter.js", [3,3,128,1], tf.float32)
+params["dense2"]["conv3"]["pointwise_filter"] = load("dense2.conv3.pointwise_filter.js", [1,1,128,128], tf.float32)
+params["dense2"]["conv3"]["bias"] = load("dense2.conv3.bias.js", [128], tf.float32)
 
+params["dense3"] = {}
+params["dense3"]["conv0"] = {}
+params["dense3"]["conv0"]["depthwise_filter"] = load("dense3.conv0.depthwise_filter.js", [3,3,128,1], tf.float32)
+params["dense3"]["conv0"]["pointwise_filter"] = load("dense3.conv0.pointwise_filter.js", [1,1,128,256], tf.float32)
+params["dense3"]["conv0"]["bias"] = load("dense3.conv0.bias.js", [256], tf.float32)
+params["dense3"]["conv1"] = {}
+params["dense3"]["conv1"]["depthwise_filter"] = load("dense3.conv1.depthwise_filter.js", [3,3,256,1], tf.float32)
+params["dense3"]["conv1"]["pointwise_filter"] = load("dense3.conv1.pointwise_filter.js", [1,1,256,256], tf.float32)
+params["dense3"]["conv1"]["bias"] = load("dense3.conv1.bias.js", [256], tf.float32)
+params["dense3"]["conv2"] = {}
+params["dense3"]["conv2"]["depthwise_filter"] = load("dense3.conv2.depthwise_filter.js", [3,3,256,1], tf.float32)
+params["dense3"]["conv2"]["pointwise_filter"] = load("dense3.conv2.pointwise_filter.js", [1,1,256,256], tf.float32)
+params["dense3"]["conv2"]["bias"] = load("dense3.conv2.bias.js", [256], tf.float32)
+params["dense3"]["conv3"] = {}
+params["dense3"]["conv3"]["depthwise_filter"] = load("dense3.conv3.depthwise_filter.js", [3,3,256,1], tf.float32)
+params["dense3"]["conv3"]["pointwise_filter"] = load("dense3.conv3.pointwise_filter.js", [1,1,256,256], tf.float32)
+params["dense3"]["conv3"]["bias"] = load("dense3.conv3.bias.js", [256], tf.float32)
 
+params["fc"] = {}
+params["fc"]["weights"] = load("weights.js", [256,136], tf.float32)
+params["fc"]["bias"] = load("bias.js", [136], tf.float32)
 
+def denseLayer(inp, dense, isFirstLayer=True):
+    if isFirstLayer:
+        out1 = tf.math.add(
+            tf.nn.conv2d(inp, dense["conv0"]["filters"], [2,2], 'SAME'),
+            dense["conv0"]["bias"])
+    else:
+        out1 = tf.math.add(
+        tf.nn.separableConv2d(
+            inp, dense["conv0"]["depthwise_filter"], dense["conv0"]["pointwise_filter"],
+            [2,2], 'SAME'),
+        dense["conv0"]["bias"])
 
+    out2 = tf.math.add(
+        tf.nn.separableConv2d(
+            out1, dense["conv1"]["depthwise_filter"], dense["conv1"]["pointwise_filter"],
+            [1,1], 'SAME'),
+        dense["conv1"]["bias"])
 
+    out3 = tf.math.add(
+        tf.nn.separableConv2d(
+            tf.nn.relu(tf.math.add(out1, out2)),
+            dense["conv2"]["depthwise_filter"], dense["conv2"]["pointwise_filter"],
+            [1,1], 'SAME'),
+        dense["conv2"]["bias"])
 
+    out4 = tf.math.add(
+        tf.nn.separableConv2d(
+            tf.nn.relu(tf.math.add(out1, tf.math.add(out2, out3))),
+            dense["conv3"]["depthwise_filter"], dense["conv3"]["pointwise_filter"],
+            [1,1], 'SAME'),
+        dense["conv3"]["bias"])
 
+    return tf.nn.relu(tf.math.add(out1, tf.math.add(out2, tf.math.add(out3, out4))))
 
+inp = [0.0]
 
+out = denseLayer(inp, params["dense0"], True)
+out = denseLayer(out, params["dense1"])
+out = denseLayer(out, params["dense2"])
+out = denseLayer(out, params["dense3"])
 
+out = tf.nn.avg_pool(out, [7,7], [2,2], 'VALID')
 
+out = tf.math.add(
+    tf.linalg.matmul(
+        out.as2D(out.shape[0], -1),
+        params["fc"]["weights"]),
+    params["fc"]["bias"])
 
-
-
-
-
-
-
-
-
-
-
-# x = tf.constant([[37.0, -23.0], [1.0, 4.0]])
-# w = tf.Variable(tf.random_uniform([2, 2]))
-# y = tf.matmul(x, w)
-# output = tf.nn.softmax(y)
-# init_op = w.initializer
-
-# with tf.Session() as sess:
-#   # Run the initializer on `w`.
-#   sess.run(init_op)
-
-#   # Evaluate `output`. `sess.run(output)` will return a NumPy array containing
-#   # the result of the computation.
-#   print(sess.run(output))
-
-#   # Evaluate `y` and `output`. Note that `y` will only be computed once, and its
-#   # result used both to return `y_val` and as an input to the `tf.nn.softmax()`
-#   # op. Both `y_val` and `output_val` will be NumPy arrays.
-#   y_val, output_val = sess.run([y, output])
-
-#   print(x)
-#   print(w)
-#   print(y_val)
-#   print(output_val)
+print(out)
