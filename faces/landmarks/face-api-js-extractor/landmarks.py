@@ -150,7 +150,7 @@ out = denseLayer(out, params["dense3"])
 out = tf.nn.avg_pool(out, [7,7,7,7], [2,2,2,2], 'VALID')
 
 out = tf.math.add(
-    tf.linalg.matmul(
+    tf.matmul(
         out.as2D(out.shape[0], -1),
         params["fc"]["weights"]),
     params["fc"]["bias"])
