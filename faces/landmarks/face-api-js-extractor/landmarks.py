@@ -111,13 +111,13 @@ params["fc"]["bias"] = load("bias.js", [136], tf.float32)
 def denseLayer(inp, dense, isFirstLayer=False):
     if isFirstLayer:
         out1 = tf.math.add(
-            tf.nn.conv2d(inp, dense["conv0"]["filters"], [2,2,2,2], 'SAME'),
+            tf.nn.conv2d(inp, dense["conv0"]["filters"], [1,2,2,1], 'SAME'),
             dense["conv0"]["bias"])
     else:
         out1 = tf.math.add(
         tf.nn.separable_conv2d(
             inp, dense["conv0"]["depthwise_filter"], dense["conv0"]["pointwise_filter"],
-            [2,2,2,2], 'SAME'),
+            [1,2,2,1], 'SAME'),
         dense["conv0"]["bias"])
 
     out2 = tf.math.add(
@@ -147,7 +147,7 @@ out = denseLayer(out, params["dense1"])
 out = denseLayer(out, params["dense2"])
 out = denseLayer(out, params["dense3"])
 
-out = tf.nn.avg_pool(out, [7,7,7,7], [2,2,2,2], 'VALID')
+out = tf.nn.avg_pool(out, [1,7,7,1], [1,2,2,1], 'VALID')
 
 out = tf.math.add(
     tf.matmul(
