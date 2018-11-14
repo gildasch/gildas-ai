@@ -4,32 +4,13 @@ import numpy
 
 params = {}
 
-def dict2Array(d, shape, i=0):
-    if len(shape) == 0:
-        return d[str(i)]
-
-    ret = []
-
-    if len(shape) == 1:
-        childLength = 1
-        total = shape[0]
-    else:
-        childLength = 1
-        for l in shape[1:]:
-            childLength = childLength * l
-        total = childLength * shape[0]
-
-    for x in range(i, i+total, childLength):
-        ret.append(dict2Array(d, shape[1:], x))
-
-    return ret
-
 def load(filename, shape, dtype):
     with open(filename, 'r') as f:
         s = f.read()
         d = eval(s)
-    a = dict2Array(d, shape)
-    return tf.convert_to_tensor(a, dtype=dtype)
+    t = tf.convert_to_tensor(list(d.values()), dtype=dtype)
+    t = tf.reshape(t, shape)
+    return t
 
 normalized = load("normalized-1.js", [1,112,112,3], tf.float32)
 
