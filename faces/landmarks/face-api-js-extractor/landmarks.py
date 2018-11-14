@@ -142,9 +142,7 @@ def denseLayer(inp, dense, isFirstLayer=True):
 
     return tf.nn.relu(tf.math.add(out1, tf.math.add(out2, tf.math.add(out3, out4))))
 
-inp = [0.0]
-
-out = denseLayer(inp, params["dense0"], True)
+out = denseLayer(normalized, params["dense0"], True)
 out = denseLayer(out, params["dense1"])
 out = denseLayer(out, params["dense2"])
 out = denseLayer(out, params["dense3"])
