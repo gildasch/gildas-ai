@@ -108,7 +108,7 @@ params["fc"] = {}
 params["fc"]["weights"] = load("weights.js", [256,136], tf.float32)
 params["fc"]["bias"] = load("bias.js", [136], tf.float32)
 
-def denseLayer(inp, dense, isFirstLayer=True):
+def denseLayer(inp, dense, isFirstLayer=False):
     if isFirstLayer:
         out1 = tf.math.add(
             tf.nn.conv2d(inp, dense["conv0"]["filters"], [2,2], 'SAME'),
