@@ -151,7 +151,7 @@ out = tf.nn.avg_pool(out, [7,7,7,7], [2,2,2,2], 'VALID')
 
 out = tf.math.add(
     tf.matmul(
-        out.as2D(out.shape[0], -1),
+        tf.reshape(out, [tf.shape(out)[0], -1]),
         params["fc"]["weights"]),
     params["fc"]["bias"])
 
