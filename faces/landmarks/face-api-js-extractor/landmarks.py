@@ -31,7 +31,7 @@ def load(filename, shape, dtype):
     a = dict2Array(d, shape)
     return tf.convert_to_tensor(a, dtype=dtype)
 
-normalized = load("normalized.js", [1,112,112,3], tf.float32)
+normalized = load("normalized-1.js", [1,112,112,3], tf.float32)
 
 params["dense0"] = {}
 params["dense0"]["conv0"] = {}
