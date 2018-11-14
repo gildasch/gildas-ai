@@ -156,3 +156,6 @@ out = tf.math.add(
     params["fc"]["bias"])
 
 print(out)
+
+with tf.Session() as sess:
+  print(sess.run(out))
