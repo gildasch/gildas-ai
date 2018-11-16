@@ -100,7 +100,7 @@ params["fc"]["bias"] = load("bias.json", [136], tf.float32)
 def denseLayer(inp, dense, isFirstLayer=False):
   if isFirstLayer:
     out1 = tf.math.add(
-        tf.nn.conv2d(inp, dense["conv0"]["filters"], [1,2,2,1], 'SAME', name='input'),
+        tf.nn.conv2d(inp, dense["conv0"]["filters"], [1,2,2,1], 'SAME'),
         dense["conv0"]["bias"])
   else:
     out1 = tf.math.add(
@@ -133,7 +133,7 @@ def denseLayer(inp, dense, isFirstLayer=False):
 
   return tf.nn.relu(tf.math.add(out1, tf.math.add(out2, tf.math.add(out3, out4))))
 
-inp = tf.placeholder(tf.float32, [1,112,112,3])
+inp = tf.placeholder(tf.float32, [1,112,112,3], name='input')
 
 out = denseLayer(inp, params["dense0"], True)
 out = denseLayer(out, params["dense1"])
