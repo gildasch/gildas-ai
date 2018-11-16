@@ -97,6 +97,7 @@ function denseBlock(x, denseBlockParams, isFirstLayer = false) {
         )
         : depthwiseSeparableConv(x, denseBlockParams.conv0, [2, 2])
     )
+
     const out2 = depthwiseSeparableConv(out1, denseBlockParams.conv1, [1, 1])
 
     const in3 = tf.relu(tf.add(out1, out2))
@@ -127,15 +128,11 @@ function fullyConnectedLayer(x, params) {
 }
 
 var out = tf.tidy(() => {
-      // const batchTensor = input.toBatchTensor(112, true)
-      // const meanRgb = [122.782, 117.001, 104.298]
-      // const normalized = normalize(batchTensor, meanRgb).div(tf.scalar(255))
-
-      let out = denseBlock(normalized, params.dense0, true)
-      out = denseBlock(out, params.dense1)
-      out = denseBlock(out, params.dense2)
-      out = denseBlock(out, params.dense3)
-      out = tf.avgPool(out, [7, 7], [2, 2], 'valid')
+  let out = denseBlock(normalized, params.dense0, true)
+  out = denseBlock(out, params.dense1)
+  out = denseBlock(out, params.dense2)
+  out = denseBlock(out, params.dense3)
+  out = tf.avgPool(out, [7, 7], [2, 2], 'valid')
 
   return fullyConnectedLayer(out.as2D(out.shape[0], -1), params.fc)
 })
