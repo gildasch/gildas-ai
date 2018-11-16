@@ -12,7 +12,15 @@ def load(filename, shape, dtype):
     t = tf.reshape(t, shape)
     return t
 
-normalized = load("normalized.json", [1,112,112,3], tf.float32)
+def loadAnNumpyArray(filename, shape, dtype):
+    with open(filename, 'r') as f:
+        s = f.read()
+        d = eval(s)
+    t = numpy.asarray(d, dtype=dtype)
+    t = numpy.reshape(t, shape)
+    return t
+
+normalized = loadAnNumpyArray("normalized.json", (1,112,112,3), numpy.float32)
 
 params["dense0"] = {}
 params["dense0"]["conv0"] = {}
@@ -92,8 +100,8 @@ params["fc"]["bias"] = load("bias.json", [136], tf.float32)
 def denseLayer(inp, dense, isFirstLayer=False):
   if isFirstLayer:
     out1 = tf.math.add(
-      tf.nn.conv2d(inp, dense["conv0"]["filters"], [1,2,2,1], 'SAME'),
-      dense["conv0"]["bias"])
+        tf.nn.conv2d(inp, dense["conv0"]["filters"], [1,2,2,1], 'SAME', name='input'),
+        dense["conv0"]["bias"])
   else:
     out1 = tf.math.add(
       tf.nn.separable_conv2d(
@@ -125,7 +133,9 @@ def denseLayer(inp, dense, isFirstLayer=False):
 
   return tf.nn.relu(tf.math.add(out1, tf.math.add(out2, tf.math.add(out3, out4))))
 
-out = denseLayer(normalized, params["dense0"], True)
+inp = tf.placeholder(tf.float32, [1,112,112,3])
+
+out = denseLayer(inp, params["dense0"], True)
 out = denseLayer(out, params["dense1"])
 out = denseLayer(out, params["dense2"])
 out = denseLayer(out, params["dense3"])
@@ -136,7 +146,13 @@ out = tf.math.add(
     tf.matmul(
         tf.reshape(out, [tf.shape(out)[0], -1]),
         params["fc"]["weights"]),
-    params["fc"]["bias"])
+    params["fc"]["bias"], 'output')
 
 with tf.Session() as sess:
-  print(sess.run(out))
+  print(sess.run(out, feed_dict={inp: normalized}))
+  # Use TF to save the graph model instead of Keras save model to load it in Golang
+  builder = tf.saved_model.builder.SavedModelBuilder("../landmarksnet")
+  # Tag the model, required for Go
+  builder.add_meta_graph_and_variables(sess, ["myTag"])
+  builder.save()
+  sess.close()
