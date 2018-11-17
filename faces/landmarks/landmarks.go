@@ -2,6 +2,8 @@ package landmarks
 
 import (
 	"image"
+	"image/color"
+	"image/draw"
 
 	"github.com/nfnt/resize"
 	"github.com/pkg/errors"
@@ -32,10 +34,6 @@ func NewLandmarkFromFile(modelName, tagName string) (*Landmark, error) {
 
 func (d *Landmark) Close() error {
 	return d.session.Close()
-}
-
-type Landmarks struct {
-	coords []float32
 }
 
 func (d *Landmark) Detect(img image.Image) (*Landmarks, error) {
@@ -97,4 +95,44 @@ func imageToTensor(img image.Image, imageHeight, imageWidth uint) (*tf.Tensor, e
 
 func convert(value uint32, mean float32) float32 {
 	return (float32(value>>8) - mean) / float32(255)
+}
+
+type Landmarks struct {
+	coords []float32
+}
+
+func (l *Landmarks) PointsOnImage(img image.Image) []image.Point {
+	w, h := float32(img.Bounds().Dx()), float32(img.Bounds().Dy())
+
+	points := []image.Point{}
+	for i := 0; i < len(l.coords)-1; i += 2 {
+		points = append(points, image.Point{
+			X: int(w * l.coords[i]),
+			Y: int(h * l.coords[i+1]),
+		})
+	}
+
+	return points
+}
+
+func (l *Landmarks) DrawOnImage(img image.Image) image.Image {
+	out := image.NewRGBA(img.Bounds())
+
+	draw.Draw(out, img.Bounds(), img, image.ZP, draw.Src)
+
+	for _, p := range l.PointsOnImage(img) {
+		drawPoint(out, p)
+	}
+
+	return out
+}
+
+func drawPoint(img *image.RGBA, p image.Point) {
+	width := 3
+
+	for i := p.X - width/2; i < p.X+width/2; i++ {
+		for j := p.Y - width/2; j < p.Y+width/2; j++ {
+			img.Set(i, j, color.RGBA{G: 255})
+		}
+	}
 }

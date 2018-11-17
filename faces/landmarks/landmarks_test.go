@@ -2,6 +2,9 @@ package landmarks
 
 import (
 	"fmt"
+	goimage "image"
+	"image/jpeg"
+	"os"
 	"testing"
 
 	"github.com/gildasch/gildas-ai/image"
@@ -12,11 +15,20 @@ func TestDetection(t *testing.T) {
 	l, err := NewLandmark()
 	require.NoError(t, err)
 
-	testImage, err := image.FromFile("1.jpg")
-	require.NoError(t, err)
+	for i := 1; i < 12; i++ {
+		testImage, err := image.FromFile(fmt.Sprintf("%d.jpg", i))
+		require.NoError(t, err)
 
-	landmarks, err := l.Detect(testImage)
-	require.NoError(t, err)
+		landmarks, err := l.Detect(testImage)
+		require.NoError(t, err)
 
-	fmt.Println(landmarks)
+		saveLandmarksImage(testImage, landmarks, fmt.Sprintf("%d-marked.jpg", i))
+	}
+}
+
+func saveLandmarksImage(img goimage.Image, landmarks *Landmarks, filename string) {
+	withLandmarks := landmarks.DrawOnImage(img)
+
+	outf, _ := os.Create(filename)
+	jpeg.Encode(outf, withLandmarks, nil)
 }
