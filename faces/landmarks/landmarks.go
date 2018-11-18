@@ -167,9 +167,49 @@ func (l *Landmarks) Center(img image.Image) image.Image {
 		},
 	}
 
+	rect = square(rect)
+
 	out := image.NewRGBA(rect)
 
 	draw.Draw(out, out.Bounds(), img, rect.Min, draw.Src)
 
 	return out
+}
+
+func square(rect image.Rectangle) image.Rectangle {
+	width, height := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
+
+	if height > width {
+		left := (height - width) / 2
+		right := height - width - left
+
+		return image.Rectangle{
+			Min: image.Point{
+				X: rect.Min.X - left,
+				Y: rect.Min.Y,
+			},
+			Max: image.Point{
+				X: rect.Max.X + right,
+				Y: rect.Max.Y,
+			},
+		}
+	}
+
+	if width > height {
+		top := (width - height) / 2
+		bottom := width - height - top
+
+		return image.Rectangle{
+			Min: image.Point{
+				X: rect.Min.X,
+				Y: rect.Min.Y - top,
+			},
+			Max: image.Point{
+				X: rect.Max.X,
+				Y: rect.Max.Y + bottom,
+			},
+		}
+	}
+
+	return rect
 }
