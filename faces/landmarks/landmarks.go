@@ -136,3 +136,40 @@ func drawPoint(img *image.RGBA, p image.Point) {
 		}
 	}
 }
+
+func (l *Landmarks) Center(img image.Image) image.Image {
+	bounds := img.Bounds()
+	minX, minY, maxX, maxY := bounds.Max.X, bounds.Max.Y, bounds.Min.X, bounds.Min.Y
+
+	for _, p := range l.PointsOnImage(img) {
+		if p.X < minX {
+			minX = p.X
+		}
+		if p.Y < minY {
+			minY = p.Y
+		}
+		if p.X > maxX {
+			maxX = p.X
+		}
+		if p.Y > maxY {
+			maxY = p.Y
+		}
+	}
+
+	rect := image.Rectangle{
+		Min: image.Point{
+			X: minX,
+			Y: minY,
+		},
+		Max: image.Point{
+			X: maxX,
+			Y: maxY,
+		},
+	}
+
+	out := image.NewRGBA(rect)
+
+	draw.Draw(out, out.Bounds(), img, rect.Min, draw.Src)
+
+	return out
+}

@@ -32,3 +32,20 @@ func saveLandmarksImage(img goimage.Image, landmarks *Landmarks, filename string
 	outf, _ := os.Create(filename)
 	jpeg.Encode(outf, withLandmarks, nil)
 }
+
+func TestGenerateData(t *testing.T) {
+	l, err := NewLandmark()
+	require.NoError(t, err)
+
+	for _, i := range []string{"a", "b", "c", "d"} {
+		testImage, err := image.FromFile(fmt.Sprintf("%s.png", i))
+		require.NoError(t, err)
+
+		landmarks, err := l.Detect(testImage)
+		require.NoError(t, err)
+
+		cropped := landmarks.Center(testImage)
+		outf, _ := os.Create(fmt.Sprintf("%s-cropped.jpg", i))
+		jpeg.Encode(outf, cropped, nil)
+	}
+}
