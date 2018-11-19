@@ -1,6 +1,9 @@
 import tensorflow as tf
 import json
 import numpy
+import sys
+
+tf.enable_eager_execution()
 
 params = {}
 
@@ -289,54 +292,59 @@ def residualDown(inp, params):
     out = convDown(inp, params["conv1"])
     out = convNoRelu(out, params["conv2"])
 
+    tf.print(tf.shape(out), output_stream=sys.stdout)
+
     pooled = tf.nn.avg_pool(inp, [1,2,2,1], [1,2,2,1], 'VALID')
+    tf.print(tf.shape(pooled), output_stream=sys.stdout)
     zeros = tf.zeros(tf.shape(pooled), tf.float32)
-    isPad = tf.shape(pooled)[3] != tf.shape(out)[3]
-    isAdjustShape = tf.shape(pooled)[1] != tf.shape(out)[1] or tf.shape(pooled)[2] != tf.shape(out)[2]
+    isPad = not tf.math.equal(tf.shape(pooled)[3], tf.shape(out)[3])
+    isAdjustShape = not tf.math.equal(tf.shape(pooled)[1], tf.shape(out)[1]) or not tf.math.equal(tf.shape(pooled)[2], tf.shape(out)[2])
 
     if isAdjustShape:
-        padShapeX = tf.shape(out).eval()
-        padShapeX[1] = 1
-        zerosW = tf.zeros(padShapeX)
+        outShape = tf.shape(out)
+        zerosW = tf.zeros([outShape[0],1,outShape[2],outShape[3]])
         out = tf.concat([out, zerosW], 1)
+        tf.print(tf.shape(out), output_stream=sys.stdout)
 
-        padShapeY = tf.shape(out).eval()
-        padShapeY[2] = 1
-        zerosH = tf.zeros(padShapeY)
+        outShape = tf.shape(out)
+        zerosH = tf.zeros([outShape[0],outShape[1],1,outShape[3]])
         out = tf.concat([out, zerosH], 2)
+        tf.print(tf.shape(out), output_stream=sys.stdout)
 
     if isPad:
         pooled = tf.concat([pooled, zeros], 3)
 
     out = tf.math.add(pooled, out)
-    out = tf.relu(out)
+    tf.print(tf.shape(out), output_stream=sys.stdout)
+    out = tf.nn.relu(out)
     return out
 
 sess = tf.Session()
 
-with sess.as_default():
-    out = convDown(normalized, params["conv32_down"])
-    out = tf.nn.max_pool(out, [1,3,3,1], [1,2,2,1], 'VALID')
+out = convDown(normalized, params["conv32_down"])
+out = tf.nn.max_pool(out, [1,3,3,1], [1,2,2,1], 'VALID')
 
-    out = residual(out, params["conv32_1"])
-    out = residual(out, params["conv32_2"])
-    out = residual(out, params["conv32_3"])
+out = residual(out, params["conv32_1"])
+out = residual(out, params["conv32_2"])
+out = residual(out, params["conv32_3"])
 
-    out = residualDown(out, params["conv64_down"])
-    out = residual(out, params["conv64_1"])
-    out = residual(out, params["conv64_2"])
-    out = residual(out, params["conv64_3"])
+out = residualDown(out, params["conv64_down"])
+out = residual(out, params["conv64_1"])
+out = residual(out, params["conv64_2"])
+out = residual(out, params["conv64_3"])
 
-    out = residualDown(out, params["conv128_down"])
-    out = residual(out, params["conv128_1"])
-    out = residual(out, params["conv128_2"])
+out = residualDown(out, params["conv128_down"])
+out = residual(out, params["conv128_1"])
+out = residual(out, params["conv128_2"])
 
-    out = residualDown(out, params["conv256_down"])
-    out = residual(out, params["conv256_1"])
-    out = residual(out, params["conv256_2"])
-    out = residualDown(out, params["conv256_down_out"])
+out = residualDown(out, params["conv256_down"])
+out = residual(out, params["conv256_1"])
+out = residual(out, params["conv256_2"])
+out = residualDown(out, params["conv256_down_out"])
 
-    globalAvg = tf.math.reduce_mean(out, [1,2])
-    out = tf.linalg.matmul(globalAvg, params["fc"])
+globalAvg = tf.math.reduce_mean(out, [1,2])
+out = tf.linalg.matmul(globalAvg, params["fc"])
 
-sess.Close()
+tf.print(out, output_stream=sys.stdout)
+
+sess.close()
