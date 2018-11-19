@@ -103,12 +103,13 @@ type Landmarks struct {
 
 func (l *Landmarks) PointsOnImage(img image.Image) []image.Point {
 	w, h := float32(img.Bounds().Dx()), float32(img.Bounds().Dy())
+	minX, minY := img.Bounds().Min.X, img.Bounds().Min.Y
 
 	points := []image.Point{}
 	for i := 0; i < len(l.coords)-1; i += 2 {
 		points = append(points, image.Point{
-			X: int(w * l.coords[i]),
-			Y: int(h * l.coords[i+1]),
+			X: minX + int(w*l.coords[i]),
+			Y: minY + int(h*l.coords[i+1]),
 		})
 	}
 

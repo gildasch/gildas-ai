@@ -1,0 +1,31 @@
+<html>
+  <head>
+  </head>
+  <body>
+    <form action="/faces" style="text-align:center;">
+      <input type="text" name="image1" style="width:50%;min-width:500px;" />
+      <input type="text" name="image2" style="width:50%;min-width:500px;" />
+      <input type="submit" />
+    </form>
+
+    <div style="text-align:center;"><img src="{{ .imageURL1 }}" style="max-width:50%;" /></div>
+
+    <div style="display: flex;justify-content:center;">
+      <ul>
+      {{ range $i, $r := .croppedFaces1 }}
+      <li><img src="{{ index $.croppedFaces1 $i }}" />: {{ index $.descriptors1 $i }}</li>
+      {{ end }}
+      </ul>
+    </div>
+
+    <div style="text-align:center;"><img src="{{ .imageURL2 }}" style="max-width:50%;" /></div>
+
+    <div style="display: flex;justify-content:center;">
+      <ul>
+      {{ range $i, $r := .croppedFaces2 }}
+      <li><img src="{{ $r }}" />: {{ index $.descriptors2 $i }}</li>
+      {{ end }}
+      </ul>
+    </div>
+  </body>
+</html>

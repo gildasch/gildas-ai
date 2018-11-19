@@ -3,10 +3,14 @@ package main
 import (
 	"fmt"
 	goimage "image"
+	"log"
 	"os"
 	"strings"
 
 	"github.com/gildasch/gildas-ai/api"
+	"github.com/gildasch/gildas-ai/faces/descriptors"
+	"github.com/gildasch/gildas-ai/faces/detection"
+	"github.com/gildasch/gildas-ai/faces/landmarks"
 	"github.com/gildasch/gildas-ai/image"
 	"github.com/gildasch/gildas-ai/tensor"
 	"github.com/gin-gonic/gin"
@@ -62,6 +66,21 @@ func main() {
 		},
 	}
 
+	detector, err := detection.NewDetectorFromFile("faces/detection/frozen_inference_graph_face.pb")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	landmark, err := landmarks.NewLandmarkFromFile("faces/landmarks/landmarksnet", "myTag")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	descriptor, err := descriptors.NewDescriptorFromFile("faces/descriptors/descriptorsnet", "myTag")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if len(os.Args) >= 2 && os.Args[1] == "web" {
 		classifiers := map[string]api.Classifier{}
 		for name, m := range models {
@@ -76,9 +95,11 @@ func main() {
 		}
 
 		app := gin.Default()
-		app.LoadHTMLFiles("templates/predictions.html")
-		app.GET("api", api.ClassifyHandler(classifiers, false))
-		app.GET("/", api.ClassifyHandler(classifiers, true))
+		app.LoadHTMLFiles("templates/predictions.html", "templates/faces.html")
+		app.GET("/object/api", api.ClassifyHandler(classifiers, false))
+		app.GET("/object", api.ClassifyHandler(classifiers, true))
+
+		app.GET("/faces", api.FacesHandler(detector, landmark, descriptor))
 
 		app.Run()
 	}
