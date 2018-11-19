@@ -49,3 +49,20 @@ func TestGenerateData(t *testing.T) {
 		jpeg.Encode(outf, cropped, nil)
 	}
 }
+
+func TestGenerateData2(t *testing.T) {
+	l, err := NewLandmark()
+	require.NoError(t, err)
+
+	for i := 1; i <= 11; i++ {
+		testImage, err := image.FromFile(fmt.Sprintf("%d.jpg", i))
+		require.NoError(t, err)
+
+		landmarks, err := l.Detect(testImage)
+		require.NoError(t, err)
+
+		cropped := landmarks.Center(testImage)
+		outf, _ := os.Create(fmt.Sprintf("%d-cropped.jpg", i))
+		jpeg.Encode(outf, cropped, nil)
+	}
+}
