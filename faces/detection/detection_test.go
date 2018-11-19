@@ -7,6 +7,7 @@ import (
 	"image/draw"
 	"image/jpeg"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/gildasch/gildas-ai/image"
@@ -52,16 +53,34 @@ func TestDetection(t *testing.T) {
 	}
 }
 
-var cutFile = 1
+func TestDetection2(t *testing.T) {
+	d, err := NewDetector()
+	require.NoError(t, err)
 
-func saveCutImages(img goimage.Image, detections Detections) {
+	testImage, err := image.FromFile("../pictures/4.jpg")
+	require.NoError(t, err)
+
+	detections, err := d.Detect(testImage)
+	require.NoError(t, err)
+
+	actual := detections.Above(0.5)
+
+	saveCutImage(testImage, actual, "4-face.jpg")
+}
+
+func saveCutImage(img goimage.Image, detections Detections, filename string) {
+	counter := 1
+
 	for _, box := range detections.Boxes {
 		out := goimage.NewRGBA(box)
 		draw.Draw(out, box, img, box.Min, draw.Src)
 
-		outf, _ := os.Create(fmt.Sprintf("%d.jpg", cutFile))
+		filename = strings.TrimSuffix(filename, ".jpg")
+		filename = strings.TrimSuffix(filename, ".jpeg")
+
+		outf, _ := os.Create(fmt.Sprintf("%s-%d.jpg", filename, counter))
 		jpeg.Encode(outf, out, nil)
-		cutFile++
+		counter++
 	}
 }
 
