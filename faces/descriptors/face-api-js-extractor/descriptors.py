@@ -3,8 +3,6 @@ import json
 import numpy
 import sys
 
-tf.enable_eager_execution()
-
 params = {}
 
 def load(filename, shape, dtype):
@@ -292,36 +290,45 @@ def residualDown(inp, params):
     out = convDown(inp, params["conv1"])
     out = convNoRelu(out, params["conv2"])
 
-    tf.print(tf.shape(out), output_stream=sys.stdout)
+    # tf.print(tf.shape(out), output_stream=sys.stdout)
 
     pooled = tf.nn.avg_pool(inp, [1,2,2,1], [1,2,2,1], 'VALID')
-    tf.print(tf.shape(pooled), output_stream=sys.stdout)
+    # tf.print(tf.shape(pooled), output_stream=sys.stdout)
     zeros = tf.zeros(tf.shape(pooled), tf.float32)
-    isPad = not tf.math.equal(tf.shape(pooled)[3], tf.shape(out)[3])
-    isAdjustShape = not tf.math.equal(tf.shape(pooled)[1], tf.shape(out)[1]) or not tf.math.equal(tf.shape(pooled)[2], tf.shape(out)[2])
+    isPad = tf.math.equal(tf.shape(pooled)[3], tf.shape(out)[3])
+    isAdjustShape = tf.math.logical_or(
+        tf.math.equal(tf.shape(pooled)[1], tf.shape(out)[1]),
+        tf.math.equal(tf.shape(pooled)[2], tf.shape(out)[2]))
 
-    if isAdjustShape:
+    def adjustShape(out):
         outShape = tf.shape(out)
         zerosW = tf.zeros([outShape[0],1,outShape[2],outShape[3]])
         out = tf.concat([out, zerosW], 1)
-        tf.print(tf.shape(out), output_stream=sys.stdout)
+        # tf.print(tf.shape(out), output_stream=sys.stdout)
 
         outShape = tf.shape(out)
         zerosH = tf.zeros([outShape[0],outShape[1],1,outShape[3]])
         out = tf.concat([out, zerosH], 2)
-        tf.print(tf.shape(out), output_stream=sys.stdout)
+        # tf.print(tf.shape(out), output_stream=sys.stdout)
 
-    if isPad:
+        return out
+
+    out = tf.cond(isAdjustShape, false_fn=lambda: adjustShape(out), true_fn=lambda: out)
+
+    def pad(pooled):
         pooled = tf.concat([pooled, zeros], 3)
+        return pooled
+
+    pooled = tf.cond(isPad, false_fn=lambda: pad(pooled), true_fn=lambda: pooled)
 
     out = tf.math.add(pooled, out)
-    tf.print(tf.shape(out), output_stream=sys.stdout)
+    # tf.print(tf.shape(out), output_stream=sys.stdout)
     out = tf.nn.relu(out)
     return out
 
-sess = tf.Session()
+inp = tf.placeholder(tf.float32, [1,150,150,3], name='input')
 
-out = convDown(normalized, params["conv32_down"])
+out = convDown(inp, params["conv32_down"])
 out = tf.nn.max_pool(out, [1,3,3,1], [1,2,2,1], 'VALID')
 
 out = residual(out, params["conv32_1"])
@@ -343,8 +350,15 @@ out = residual(out, params["conv256_2"])
 out = residualDown(out, params["conv256_down_out"])
 
 globalAvg = tf.math.reduce_mean(out, [1,2])
-out = tf.linalg.matmul(globalAvg, params["fc"])
+out = tf.linalg.matmul(globalAvg, params["fc"], name='output')
 
-tf.print(out, output_stream=sys.stdout)
+with tf.Session() as sess:
+    # tf.print(out, output_stream=sys.stdout)
+    print(sess.run(out, feed_dict={inp: normalized}))
 
-sess.close()
+    # Use TF to save the graph model instead of Keras save model to load it in Golang
+    builder = tf.saved_model.builder.SavedModelBuilder("../descriptorsnet")
+    # Tag the model, required for Go
+    builder.add_meta_graph_and_variables(sess, ["myTag"])
+    builder.save()
+    sess.close()
