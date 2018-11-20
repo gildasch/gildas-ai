@@ -61,13 +61,30 @@ func FacesHandler(detector *detection.Detector, landmark *landmarks.Landmark,
 			return
 		}
 
+		names1, names2 := []string{}, []string{}
+		for i := range descr1 {
+			names1 = append(names1, fmt.Sprintf("Person %d", i))
+		}
+
+		for i := range descr2 {
+			name := "unknown"
+			for j := range descr1 {
+				if descr1[j].DistanceTo(descr2[i]) < 0.4 {
+					name = fmt.Sprintf("Person %d", j)
+				}
+			}
+			names2 = append(names2, name)
+		}
+
 		c.HTML(http.StatusOK, "faces.html", gin.H{
 			"imageURL1":     imageURL1,
 			"croppedFaces1": allToHTMLBase64(cropped1),
 			"descriptors1":  descr1,
+			"names1":        names1,
 			"imageURL2":     imageURL2,
 			"croppedFaces2": allToHTMLBase64(cropped2),
 			"descriptors2":  descr2,
+			"names2":        names2,
 		})
 		return
 	}

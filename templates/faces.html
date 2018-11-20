@@ -13,7 +13,7 @@
     <div style="display: flex;justify-content:center;">
       <ul>
       {{ range $i, $r := .croppedFaces1 }}
-      <li><img src="{{ index $.croppedFaces1 $i }}" />: {{ index $.descriptors1 $i }}</li>
+      <li><img src="{{ index $.croppedFaces1 $i }}" />: {{ index $.names1 $i }}</li>
       {{ end }}
       </ul>
     </div>
@@ -23,7 +23,7 @@
     <div style="display: flex;justify-content:center;">
       <ul>
       {{ range $i, $r := .croppedFaces2 }}
-      <li><img src="{{ $r }}" />: {{ index $.descriptors2 $i }}</li>
+      <li><img src="{{ $r }}" />: {{ index $.names2 $i }}</li>
       {{ end }}
       </ul>
     </div>
