@@ -29,6 +29,11 @@ func main() {
 	facesFolder := os.Args[2]
 	faceToRecognize := os.Args[3]
 
+	noCalculation := false
+	if len(os.Args) >= 5 && os.Args[4] == "-no-calculation" {
+		noCalculation = true
+	}
+
 	extractor, err := faces.NewDefaultExtractor(modelRootFolder)
 	if err != nil {
 		log.Fatal(err)
@@ -51,7 +56,7 @@ func main() {
 
 	fmt.Printf("%d face(s) found in %s\n", len(targetDescr), os.Args[1])
 
-	descrs, err := calculateDescriptors(extractor, facesFolder)
+	descrs, err := calculateDescriptors(extractor, facesFolder, noCalculation)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,13 +70,17 @@ func main() {
 }
 
 func calculateDescriptors(extractor *faces.Extractor,
-	facesFolder string) (map[string]*descriptors.Descriptors, error) {
+	facesFolder string, noCalculation bool) (map[string]*descriptors.Descriptors, error) {
 	faceFiles, err := filepath.Glob(strings.TrimSuffix(facesFolder, "/") + "/*")
 	if err != nil {
 		return nil, err
 	}
 
 	descrs := preCalculatedOrNew(facesFolder)
+
+	if noCalculation {
+		return descrs, nil
+	}
 
 	for _, faceFile := range faceFiles {
 		if strings.Contains(faceFile, ".cropped.jpg") {
