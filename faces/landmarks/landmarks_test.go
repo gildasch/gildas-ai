@@ -3,10 +3,12 @@ package landmarks
 import (
 	"fmt"
 	goimage "image"
+	"image/draw"
 	"image/jpeg"
 	"os"
 	"testing"
 
+	"github.com/gildasch/gildas-ai/faces/detection"
 	"github.com/gildasch/gildas-ai/image"
 	"github.com/stretchr/testify/require"
 )
@@ -44,7 +46,7 @@ func TestGenerateData(t *testing.T) {
 		landmarks, err := l.Detect(testImage)
 		require.NoError(t, err)
 
-		cropped := landmarks.Center(testImage)
+		cropped := landmarks.Center(testImage, testImage)
 		outf, _ := os.Create(fmt.Sprintf("%s-cropped.jpg", i))
 		jpeg.Encode(outf, cropped, nil)
 	}
@@ -61,7 +63,7 @@ func TestGenerateData2(t *testing.T) {
 		landmarks, err := l.Detect(testImage)
 		require.NoError(t, err)
 
-		cropped := landmarks.Center(testImage)
+		cropped := landmarks.Center(testImage, testImage)
 		outf, _ := os.Create(fmt.Sprintf("%d-cropped.jpg", i))
 		jpeg.Encode(outf, cropped, nil)
 	}
@@ -77,7 +79,45 @@ func TestGenerateData3(t *testing.T) {
 	landmarks, err := l.Detect(testImage)
 	require.NoError(t, err)
 
-	cropped := landmarks.Center(testImage)
+	cropped := landmarks.Center(testImage, testImage)
 	outf, _ := os.Create("4-face-1-cropped.jpg")
 	jpeg.Encode(outf, cropped, nil)
+}
+
+func TestFullImage(t *testing.T) {
+	testImage, err := image.FromFile("../pictures/2.jpg")
+	require.NoError(t, err)
+
+	detector, err := detection.NewDetectorFromFile("../detection/frozen_inference_graph_face.pb")
+	require.NoError(t, err)
+
+	dets, err := detector.Detect(testImage)
+	require.NoError(t, err)
+
+	actual := dets.Above(0.5)
+
+	boxes := []goimage.Image{}
+	for _, box := range actual.Boxes {
+		out := goimage.NewRGBA(box)
+		draw.Draw(out, box, testImage, box.Min, draw.Src)
+		boxes = append(boxes, out)
+	}
+
+	l, err := NewLandmark()
+	require.NoError(t, err)
+
+	for i, b := range boxes {
+		fmt.Println(b.Bounds())
+		landmarks, err := l.Detect(b)
+		require.NoError(t, err)
+
+		withLandmarks := landmarks.DrawOnFullImage(b, testImage)
+
+		outf, _ := os.Create(fmt.Sprintf("2-%d-marked.jpg", i))
+		jpeg.Encode(outf, withLandmarks, nil)
+
+		cropped := landmarks.Center(b, testImage)
+		outf2, _ := os.Create(fmt.Sprintf("2-%d-cropped.jpg", i))
+		jpeg.Encode(outf2, cropped, nil)
+	}
 }

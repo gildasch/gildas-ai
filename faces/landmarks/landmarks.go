@@ -128,6 +128,18 @@ func (l *Landmarks) DrawOnImage(img image.Image) image.Image {
 	return out
 }
 
+func (l *Landmarks) DrawOnFullImage(cropped, full image.Image) image.Image {
+	out := image.NewRGBA(full.Bounds())
+
+	draw.Draw(out, full.Bounds(), full, image.ZP, draw.Src)
+
+	for _, p := range l.PointsOnImage(cropped) {
+		drawPoint(out, p)
+	}
+
+	return out
+}
+
 func drawPoint(img *image.RGBA, p image.Point) {
 	width := 3
 
@@ -138,11 +150,11 @@ func drawPoint(img *image.RGBA, p image.Point) {
 	}
 }
 
-func (l *Landmarks) Center(img image.Image) image.Image {
-	bounds := img.Bounds()
+func (l *Landmarks) Center(cropped, full image.Image) image.Image {
+	bounds := full.Bounds()
 	minX, minY, maxX, maxY := bounds.Max.X, bounds.Max.Y, bounds.Min.X, bounds.Min.Y
 
-	for _, p := range l.PointsOnImage(img) {
+	for _, p := range l.PointsOnImage(cropped) {
 		if p.X < minX {
 			minX = p.X
 		}
@@ -169,10 +181,11 @@ func (l *Landmarks) Center(img image.Image) image.Image {
 	}
 
 	rect = square(rect)
+	rect = insideOf(rect, bounds)
 
 	out := image.NewRGBA(rect)
 
-	draw.Draw(out, out.Bounds(), img, rect.Min, draw.Src)
+	draw.Draw(out, out.Bounds(), full, rect.Min, draw.Src)
 
 	return out
 }
@@ -210,6 +223,30 @@ func square(rect image.Rectangle) image.Rectangle {
 				Y: rect.Max.Y + bottom,
 			},
 		}
+	}
+
+	return rect
+}
+
+func insideOf(rect, bounds image.Rectangle) image.Rectangle {
+	if bounds.Min.X > rect.Min.X {
+		rect.Max.X += bounds.Min.X - rect.Min.X
+		rect.Min.X = bounds.Min.X
+	}
+
+	if bounds.Min.Y > rect.Min.Y {
+		rect.Max.Y += bounds.Min.Y - rect.Min.Y
+		rect.Min.Y = bounds.Min.Y
+	}
+
+	if rect.Max.X > bounds.Max.X {
+		rect.Min.X -= rect.Max.X - bounds.Max.X
+		rect.Max.X = bounds.Max.X
+	}
+
+	if rect.Max.Y > bounds.Max.Y {
+		rect.Min.Y -= rect.Max.Y - bounds.Max.Y
+		rect.Max.Y = bounds.Max.Y
 	}
 
 	return rect

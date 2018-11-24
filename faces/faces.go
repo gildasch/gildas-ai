@@ -58,7 +58,7 @@ func (e *Extractor) Extract(img image.Image) ([]image.Image, []*descriptors.Desc
 			return nil, nil, errors.Wrap(err, "error detecting landmarks")
 		}
 
-		cropped2 := landmarks.Center(cropped)
+		cropped2 := landmarks.Center(cropped, img)
 
 		descriptors, err := e.Descriptor.Compute(cropped2)
 		if err != nil {
