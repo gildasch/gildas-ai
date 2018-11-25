@@ -2,7 +2,7 @@ package detection
 
 import (
 	"fmt"
-	goimage "image"
+	"image"
 	"image/color"
 	"image/draw"
 	"image/jpeg"
@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gildasch/gildas-ai/image"
+	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,7 +38,7 @@ func TestDetection(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		testImage, err := image.FromFile(tc.filename)
+		testImage, err := imageutils.FromFile(tc.filename)
 		require.NoError(t, err)
 
 		detections, err := d.Detect(testImage)
@@ -57,7 +57,7 @@ func TestDetection2(t *testing.T) {
 	d, err := NewDetector()
 	require.NoError(t, err)
 
-	testImage, err := image.FromFile("../pictures/4.jpg")
+	testImage, err := imageutils.FromFile("../pictures/4.jpg")
 	require.NoError(t, err)
 
 	detections, err := d.Detect(testImage)
@@ -68,11 +68,11 @@ func TestDetection2(t *testing.T) {
 	saveCutImage(testImage, actual, "4-face.jpg")
 }
 
-func saveCutImage(img goimage.Image, detections Detections, filename string) {
+func saveCutImage(img image.Image, detections Detections, filename string) {
 	counter := 1
 
 	for _, box := range detections.Boxes {
-		out := goimage.NewRGBA(box)
+		out := image.NewRGBA(box)
 		draw.Draw(out, box, img, box.Min, draw.Src)
 
 		filename = strings.TrimSuffix(filename, ".jpg")
@@ -84,9 +84,9 @@ func saveCutImage(img goimage.Image, detections Detections, filename string) {
 	}
 }
 
-func saveImage(img goimage.Image, detections Detections, filename string) {
-	out := goimage.NewRGBA(img.Bounds())
-	draw.Draw(out, out.Bounds(), img, goimage.ZP, draw.Src)
+func saveImage(img image.Image, detections Detections, filename string) {
+	out := image.NewRGBA(img.Bounds())
+	draw.Draw(out, out.Bounds(), img, image.ZP, draw.Src)
 
 	for _, box := range detections.Boxes {
 		colorRectangle(out, box.Min.X, box.Min.Y, box.Max.X, box.Max.Y)
@@ -96,20 +96,20 @@ func saveImage(img goimage.Image, detections Detections, filename string) {
 	jpeg.Encode(outf, out, nil)
 }
 
-func colorRectangle(img *goimage.RGBA, x1, y1, x2, y2 int) {
+func colorRectangle(img *image.RGBA, x1, y1, x2, y2 int) {
 	hLine(img, x1, x2, y1)
 	hLine(img, x1, x2, y2)
 	vLine(img, x1, y1, y2)
 	vLine(img, x2, y1, y2)
 }
 
-func hLine(img *goimage.RGBA, x1, x2, y int) {
+func hLine(img *image.RGBA, x1, x2, y int) {
 	for i := x1; i < x2; i++ {
 		img.Set(i, y, color.RGBA{G: 255})
 	}
 }
 
-func vLine(img *goimage.RGBA, x, y1, y2 int) {
+func vLine(img *image.RGBA, x, y1, y2 int) {
 	for j := y1; j < y2; j++ {
 		img.Set(x, j, color.RGBA{G: 255})
 	}

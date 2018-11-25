@@ -2,18 +2,18 @@ package api
 
 import (
 	"fmt"
-	goimage "image"
+	"image"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/gildasch/gildas-ai/image"
+	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/gildasch/gildas-ai/tensor"
 	"github.com/gin-gonic/gin"
 )
 
 type Classifier interface {
-	Inception(img goimage.Image) (*tensor.Predictions, error)
+	Inception(img image.Image) (*tensor.Predictions, error)
 }
 
 type classifierResult struct {
@@ -32,7 +32,7 @@ func ClassifyHandler(classifiers map[string]Classifier, html bool) gin.HandlerFu
 			return
 		}
 
-		img, err := image.FromURL(imageURL)
+		img, err := imageutils.FromURL(imageURL)
 		if err != nil {
 			c.AbortWithStatusJSON(
 				http.StatusBadRequest,

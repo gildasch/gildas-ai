@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	goimage "image"
+	"image"
 	"image/jpeg"
 	"log"
 	"os"
@@ -12,7 +12,7 @@ import (
 
 	"github.com/gildasch/gildas-ai/faces"
 	"github.com/gildasch/gildas-ai/faces/descriptors"
-	"github.com/gildasch/gildas-ai/image"
+	"github.com/gildasch/gildas-ai/imageutils"
 )
 
 func usage() {
@@ -39,7 +39,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	targetImg, err := image.FromFile(faceToRecognize)
+	targetImg, err := imageutils.FromFile(faceToRecognize)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -94,7 +94,7 @@ func calculateDescriptors(extractor *faces.Extractor,
 
 		fmt.Printf("processing %s\n", faceFile)
 
-		img, err := image.FromFile(faceFile)
+		img, err := imageutils.FromFile(faceFile)
 		if err != nil {
 			fmt.Println("error processing file %s: %v\n", faceFile, err)
 			continue
@@ -159,7 +159,7 @@ func savePreCalculated(facesFolder string, descrs map[string]*descriptors.Descri
 	return
 }
 
-func saveImage(filename string, img goimage.Image) {
+func saveImage(filename string, img image.Image) {
 	f, err := os.Create(filename + ".cropped.jpg")
 	if err != nil {
 		fmt.Printf("error saving %q: %v", filename, err)

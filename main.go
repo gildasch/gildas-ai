@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	goimage "image"
+	"image"
 	"log"
 	"os"
 	"strings"
@@ -11,7 +11,7 @@ import (
 	"github.com/gildasch/gildas-ai/faces/descriptors"
 	"github.com/gildasch/gildas-ai/faces/detection"
 	"github.com/gildasch/gildas-ai/faces/landmarks"
-	"github.com/gildasch/gildas-ai/image"
+	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/gildasch/gildas-ai/tensor"
 	"github.com/gin-gonic/gin"
 )
@@ -123,15 +123,15 @@ func main() {
 	}
 	defer close()
 
-	var img goimage.Image
+	var img image.Image
 	if strings.HasPrefix(imageName, "https://") || strings.HasPrefix(imageName, "http://") {
-		img, err = image.FromURL(imageName)
+		img, err = imageutils.FromURL(imageName)
 		if err != nil {
 			fmt.Printf("cannot read remote image %q: %v\n", imageName, err)
 			return
 		}
 	} else {
-		img, err = image.FromFile(imageName)
+		img, err = imageutils.FromFile(imageName)
 		if err != nil {
 			fmt.Printf("cannot read local image %q: %v\n", imageName, err)
 			return

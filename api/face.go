@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"html/template"
-	goimage "image"
+	"image"
 	"image/draw"
 	"image/jpeg"
 	"net/http"
@@ -13,7 +13,7 @@ import (
 	"github.com/gildasch/gildas-ai/faces/descriptors"
 	"github.com/gildasch/gildas-ai/faces/detection"
 	"github.com/gildasch/gildas-ai/faces/landmarks"
-	"github.com/gildasch/gildas-ai/image"
+	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 )
@@ -29,7 +29,7 @@ func FacesHandler(detector *detection.Detector, landmark *landmarks.Landmark,
 			return
 		}
 
-		img1, err := image.FromURL(imageURL1)
+		img1, err := imageutils.FromURL(imageURL1)
 		if err != nil {
 			c.AbortWithStatusJSON(
 				http.StatusBadRequest,
@@ -45,7 +45,7 @@ func FacesHandler(detector *detection.Detector, landmark *landmarks.Landmark,
 			return
 		}
 
-		img2, err := image.FromURL(imageURL2)
+		img2, err := imageutils.FromURL(imageURL2)
 		if err != nil {
 			c.AbortWithStatusJSON(
 				http.StatusBadRequest,
@@ -90,9 +90,9 @@ func FacesHandler(detector *detection.Detector, landmark *landmarks.Landmark,
 	}
 }
 
-func extract(img goimage.Image,
+func extract(img image.Image,
 	detector *detection.Detector, landmark *landmarks.Landmark,
-	descriptor *descriptors.Descriptor) ([]goimage.Image, []*descriptors.Descriptors, error) {
+	descriptor *descriptors.Descriptor) ([]image.Image, []*descriptors.Descriptors, error) {
 	allDetections, err := detector.Detect(img)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error detecting faces")
@@ -100,10 +100,10 @@ func extract(img goimage.Image,
 
 	detections := allDetections.Above(0.5)
 
-	images := []goimage.Image{}
+	images := []image.Image{}
 	descrs := []*descriptors.Descriptors{}
 	for _, box := range detections.Boxes {
-		cropped := goimage.NewRGBA(box)
+		cropped := image.NewRGBA(box)
 		draw.Draw(cropped, box, img, box.Min, draw.Src)
 
 		landmarks, err := landmark.Detect(cropped)
@@ -125,7 +125,7 @@ func extract(img goimage.Image,
 	return images, descrs, nil
 }
 
-func allToHTMLBase64(img []goimage.Image) []template.URL {
+func allToHTMLBase64(img []image.Image) []template.URL {
 	ret := []template.URL{}
 
 	for _, i := range img {
@@ -135,7 +135,7 @@ func allToHTMLBase64(img []goimage.Image) []template.URL {
 	return ret
 }
 
-func toHTMLBase64(img goimage.Image) string {
+func toHTMLBase64(img image.Image) string {
 	var buf bytes.Buffer
 	_ = jpeg.Encode(&buf, img, nil)
 

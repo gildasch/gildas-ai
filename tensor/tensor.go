@@ -1,10 +1,10 @@
 package tensor
 
 import (
-	goimage "image"
+	"image"
 	"sort"
 
-	"github.com/gildasch/gildas-ai/image"
+	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/pkg/errors"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 )
@@ -68,8 +68,8 @@ func (p *Predictions) Best(n int) []Prediction {
 	return ret[:n]
 }
 
-func (m *Model) Inception(img goimage.Image) (*Predictions, error) {
-	img = image.Scaled(img, m.ImageHeight, m.ImageWidth)
+func (m *Model) Inception(img image.Image) (*Predictions, error) {
+	img = imageutils.Scaled(img, m.ImageHeight, m.ImageWidth)
 
 	tensor, err := imageToTensor(img, m.ImageMode, m.ImageHeight, m.ImageWidth)
 	if err != nil {
@@ -113,7 +113,7 @@ const (
 	ImageModeCaffe              = "caffe"
 )
 
-func imageToTensor(img goimage.Image, imageMode string, imageHeight, imageWidth uint) (*tf.Tensor, error) {
+func imageToTensor(img image.Image, imageMode string, imageHeight, imageWidth uint) (*tf.Tensor, error) {
 	switch imageMode {
 	case ImageModeTensorflow:
 		return imageToTensorTF(img, imageHeight, imageWidth)
@@ -126,7 +126,7 @@ func imageToTensor(img goimage.Image, imageMode string, imageHeight, imageWidth 
 	return nil, errors.Errorf("unknown image mode %q", imageMode)
 }
 
-func imageToTensorTF(img goimage.Image, imageHeight, imageWidth uint) (*tf.Tensor, error) {
+func imageToTensorTF(img image.Image, imageHeight, imageWidth uint) (*tf.Tensor, error) {
 	var image [1][][][3]float32
 
 	for j := 0; j < int(imageHeight); j++ {
@@ -149,7 +149,7 @@ func convertTF(value uint32) float32 {
 	return (float32(value>>8) - float32(127.5)) / float32(127.5)
 }
 
-func imageToTensorTFPositive(img goimage.Image, imageHeight, imageWidth uint) (*tf.Tensor, error) {
+func imageToTensorTFPositive(img image.Image, imageHeight, imageWidth uint) (*tf.Tensor, error) {
 	var image [1][][][3]float32
 
 	for j := 0; j < int(imageHeight); j++ {
@@ -172,7 +172,7 @@ func convertTFPositive(value uint32) float32 {
 	return float32(value>>8) / float32(255)
 }
 
-func imageToTensorCaffe(img goimage.Image, imageHeight, imageWidth uint) (*tf.Tensor, error) {
+func imageToTensorCaffe(img image.Image, imageHeight, imageWidth uint) (*tf.Tensor, error) {
 	var image [1][][][3]float32
 
 	for j := 0; j < int(imageHeight); j++ {

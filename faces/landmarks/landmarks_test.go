@@ -2,7 +2,6 @@ package landmarks
 
 import (
 	"fmt"
-	goimage "image"
 	"image/draw"
 	"image/jpeg"
 	"os"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/gildasch/gildas-ai/faces/detection"
 	"github.com/gildasch/gildas-ai/image"
+	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,7 +18,7 @@ func TestDetection(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := 1; i < 12; i++ {
-		testImage, err := image.FromFile(fmt.Sprintf("%d.jpg", i))
+		testImage, err := imageutils.FromFile(fmt.Sprintf("%d.jpg", i))
 		require.NoError(t, err)
 
 		landmarks, err := l.Detect(testImage)
@@ -28,7 +28,7 @@ func TestDetection(t *testing.T) {
 	}
 }
 
-func saveLandmarksImage(img goimage.Image, landmarks *Landmarks, filename string) {
+func saveLandmarksImage(img image.Image, landmarks *Landmarks, filename string) {
 	withLandmarks := landmarks.DrawOnImage(img)
 
 	outf, _ := os.Create(filename)
@@ -40,7 +40,7 @@ func TestGenerateData(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, i := range []string{"a", "b", "c", "d"} {
-		testImage, err := image.FromFile(fmt.Sprintf("%s.png", i))
+		testImage, err := imageutils.FromFile(fmt.Sprintf("%s.png", i))
 		require.NoError(t, err)
 
 		landmarks, err := l.Detect(testImage)
@@ -57,7 +57,7 @@ func TestGenerateData2(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := 1; i <= 11; i++ {
-		testImage, err := image.FromFile(fmt.Sprintf("%d.jpg", i))
+		testImage, err := imageutils.FromFile(fmt.Sprintf("%d.jpg", i))
 		require.NoError(t, err)
 
 		landmarks, err := l.Detect(testImage)
@@ -73,7 +73,7 @@ func TestGenerateData3(t *testing.T) {
 	l, err := NewLandmark()
 	require.NoError(t, err)
 
-	testImage, err := image.FromFile("4-face-1.jpg")
+	testImage, err := imageutils.FromFile("4-face-1.jpg")
 	require.NoError(t, err)
 
 	landmarks, err := l.Detect(testImage)
@@ -85,7 +85,7 @@ func TestGenerateData3(t *testing.T) {
 }
 
 func TestFullImage(t *testing.T) {
-	testImage, err := image.FromFile("../pictures/2.jpg")
+	testImage, err := imageutils.FromFile("../pictures/2.jpg")
 	require.NoError(t, err)
 
 	detector, err := detection.NewDetectorFromFile("../detection/frozen_inference_graph_face.pb")
@@ -96,9 +96,9 @@ func TestFullImage(t *testing.T) {
 
 	actual := dets.Above(0.5)
 
-	boxes := []goimage.Image{}
+	boxes := []image.Image{}
 	for _, box := range actual.Boxes {
-		out := goimage.NewRGBA(box)
+		out := image.NewRGBA(box)
 		draw.Draw(out, box, testImage, box.Min, draw.Src)
 		boxes = append(boxes, out)
 	}

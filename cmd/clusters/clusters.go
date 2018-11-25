@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	goimage "image"
+	"image"
 	"image/jpeg"
 	"log"
 	"os"
@@ -11,7 +11,7 @@ import (
 
 	"github.com/gildasch/gildas-ai/faces"
 	"github.com/gildasch/gildas-ai/faces/descriptors"
-	"github.com/gildasch/gildas-ai/image"
+	"github.com/gildasch/gildas-ai/imageutils"
 )
 
 func usage() {
@@ -53,7 +53,7 @@ func calculateDescriptors(extractor *faces.Extractor,
 	for _, faceFile := range faceFiles {
 		fmt.Printf("processing %s\n", faceFile)
 
-		img, err := image.FromFile(faceFile)
+		img, err := imageutils.FromFile(faceFile)
 		if err != nil {
 			fmt.Println("error processing file %s: %v\n", faceFile, err)
 			continue
@@ -79,7 +79,7 @@ func calculateDescriptors(extractor *faces.Extractor,
 	return descrs, nil
 }
 
-func saveImage(filename string, img goimage.Image) {
+func saveImage(filename string, img image.Image) {
 	f, err := os.Create(filename + ".cropped.jpg")
 	if err != nil {
 		fmt.Printf("error saving %q: %v", filename, err)
