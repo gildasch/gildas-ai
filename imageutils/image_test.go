@@ -12,7 +12,7 @@ func TestFromZip(t *testing.T) {
 	zipBytes, err := ioutil.ReadFile("test.zip")
 	require.NoError(t, err)
 
-	images, errs := FromZip(zipBytes, int64(len(zipBytes)))
+	images, errs := FromZip(zipBytes)
 	assert.Len(t, errs, 0)
 	assert.Len(t, images, 4)
 }

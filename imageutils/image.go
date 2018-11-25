@@ -48,8 +48,8 @@ func Scaled(img image.Image, height, width uint) image.Image {
 	return resize.Resize(width, height, img, resize.NearestNeighbor)
 }
 
-func FromZip(zipBytes []byte, size int64) (images []image.Image, errs []error) {
-	r, err := zip.NewReader(bytes.NewReader(zipBytes), size)
+func FromZip(zipBytes []byte) (images []image.Image, errs []error) {
+	r, err := zip.NewReader(bytes.NewReader(zipBytes), int64(len(zipBytes)))
 	if err != nil {
 		return nil, []error{errors.Wrap(err, "error opening zip file")}
 	}
