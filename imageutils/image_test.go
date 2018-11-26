@@ -1,6 +1,7 @@
 package imageutils
 
 import (
+	"bytes"
 	"io/ioutil"
 	"testing"
 
@@ -12,7 +13,7 @@ func TestFromZip(t *testing.T) {
 	zipBytes, err := ioutil.ReadFile("test.zip")
 	require.NoError(t, err)
 
-	images, errs := FromZip(zipBytes)
+	images, errs := FromZip(bytes.NewReader(zipBytes), int64(len(zipBytes)))
 	assert.Len(t, errs, 0)
 	assert.Len(t, images, 4)
 }

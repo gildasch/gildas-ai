@@ -1,31 +1,51 @@
 <html>
   <head>
+    <style>
+      .sources {
+          float:left;
+          width:30%;
+          padding:0px;
+      }
+      .sources li {
+          list-style-type: none;
+      }
+      .sources li img {
+          width:100%;
+      }
+      .matches {
+          float:right;
+          width: 65%;
+          padding:0px;
+      }
+      .matches li {
+          list-style-type: none;
+          float:left;
+          padding-left: 10px;
+          padding-right: 10px;
+          width: 330px;
+      }
+      .matches img {
+          max-width: 100px;
+          max-height: 100px;
+      }
+    </style>
   </head>
   <body>
-    <form action="/faces" style="text-align:center;">
-      <input type="text" name="image1" style="width:50%;min-width:500px;" />
-      <input type="text" name="image2" style="width:50%;min-width:500px;" />
+    <form action="/faces" method="post" style="text-align:center;" enctype="multipart/form-data">
+      <input type="file" name="image_zip" />
       <input type="submit" />
     </form>
 
-    <div style="text-align:center;"><img src="{{ .imageURL1 }}" style="max-width:50%;" /></div>
-
-    <div style="display: flex;justify-content:center;">
-      <ul>
-      {{ range $i, $r := .croppedFaces1 }}
-      <li><img src="{{ index $.croppedFaces1 $i }}" />: {{ index $.names1 $i }}</li>
+    <ul class='sources'>
+      {{ range $source := .sources }}
+      <li><img src="{{ $source }}" /></li>
       {{ end }}
-      </ul>
-    </div>
+    </ul>
 
-    <div style="text-align:center;"><img src="{{ .imageURL2 }}" style="max-width:50%;" /></div>
-
-    <div style="display: flex;justify-content:center;">
-      <ul>
-      {{ range $i, $r := .croppedFaces2 }}
-      <li><img src="{{ $r }}" />: {{ index $.names2 $i }}</li>
+    <ul class='matches'>
+      {{ range $match := .matches }}
+      <li><img src="{{ $match.Cropped1 }}" /> <img src="{{ $match.Cropped2 }}" /> {{ $match.Distance }}</li>
       {{ end }}
-      </ul>
-    </div>
+    </ul>
   </body>
 </html>

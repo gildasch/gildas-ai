@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gildasch/gildas-ai/api"
+	"github.com/gildasch/gildas-ai/faces"
 	"github.com/gildasch/gildas-ai/faces/descriptors"
 	"github.com/gildasch/gildas-ai/faces/detection"
 	"github.com/gildasch/gildas-ai/faces/landmarks"
@@ -99,7 +100,13 @@ func main() {
 		app.GET("/object/api", api.ClassifyHandler(classifiers, false))
 		app.GET("/object", api.ClassifyHandler(classifiers, true))
 
-		app.GET("/faces", api.FacesHandler(detector, landmark, descriptor))
+		batches := map[string]*faces.Batch{}
+		app.Any("/faces", api.FacesHandler(&faces.Extractor{
+			Detector:   detector,
+			Landmark:   landmark,
+			Descriptor: descriptor}, batches))
+		app.GET("/faces/batch/:batchID/sources/:name", api.FaceSourceHandler(batches))
+		app.GET("/faces/batch/:batchID/cropped/:name", api.FaceCroppedHandler(batches))
 
 		app.Run()
 	}

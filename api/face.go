@@ -4,135 +4,83 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"html/template"
 	"image"
-	"image/draw"
 	"image/jpeg"
 	"net/http"
+	"sort"
+	"strconv"
+	"strings"
 
-	"github.com/gildasch/gildas-ai/faces/descriptors"
-	"github.com/gildasch/gildas-ai/faces/detection"
-	"github.com/gildasch/gildas-ai/faces/landmarks"
+	"github.com/gildasch/gildas-ai/faces"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 )
 
-func FacesHandler(detector *detection.Detector, landmark *landmarks.Landmark,
-	descriptor *descriptors.Descriptor) gin.HandlerFunc {
+func FacesHandler(extractor *faces.Extractor, batches map[string]*faces.Batch) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		imageURL1 := c.Query("image1")
-		imageURL2 := c.Query("image2")
-
-		if imageURL1 == "" || imageURL2 == "" {
-			c.HTML(http.StatusOK, "faces.html", nil)
+		fileHeader, err := c.FormFile("image_zip")
+		if err != nil {
+			c.HTML(http.StatusOK, "faces.html", gin.H{})
 			return
 		}
 
-		img1, err := imageutils.FromURL(imageURL1)
+		file, err := fileHeader.Open()
 		if err != nil {
 			c.AbortWithStatusJSON(
 				http.StatusBadRequest,
-				fmt.Sprintf("cannot read remote image %q: %v\n", imageURL1, err))
+				fmt.Sprintf("cannot open zip file: %v", err))
 			return
 		}
+		defer file.Close()
 
-		cropped1, descr1, err := extract(img1, detector, landmark, descriptor)
-		if err != nil {
+		images, errs := imageutils.FromZip(file, fileHeader.Size)
+		if len(images) == 0 {
 			c.AbortWithStatusJSON(
 				http.StatusBadRequest,
-				fmt.Sprintf("cannot extract descriptors from image %q: %v\n", imageURL1, err))
+				fmt.Sprintf("no image found in zip file: %v", errs))
 			return
 		}
 
-		img2, err := imageutils.FromURL(imageURL2)
-		if err != nil {
-			c.AbortWithStatusJSON(
-				http.StatusBadRequest,
-				fmt.Sprintf("cannot read remote image %q: %v\n", imageURL2, err))
-			return
-		}
+		batch := &faces.Batch{}
+		batch = batch.Process(extractor, images)
+		id, _ := uuid.NewV4()
+		batches[id.String()] = batch
 
-		cropped2, descr2, err := extract(img2, detector, landmark, descriptor)
-		if err != nil {
-			c.AbortWithStatusJSON(
-				http.StatusBadRequest,
-				fmt.Sprintf("cannot extract descriptors from image %q: %v\n", imageURL2, err))
-			return
-		}
-
-		names1, names2 := []string{}, []string{}
-		for i := range descr1 {
-			names1 = append(names1, fmt.Sprintf("Person %d", i))
-		}
-
-		for i := range descr2 {
-			name := "unknown"
-			for j := range descr1 {
-				if descr1[j].DistanceTo(descr2[i]) < 0.4 {
-					name = fmt.Sprintf("Person %d", j)
-				}
+		var matches []match
+		for i := 0; i < len(batch.Items); i++ {
+			for j := i + 1; j < len(batch.Items); j++ {
+				matches = append(matches, match{
+					Name1:    batch.Items[i].Name,
+					Name2:    batch.Items[j].Name,
+					Cropped1: fmt.Sprintf("/faces/batch/%s/cropped/%d.jpg", id, i),
+					Cropped2: fmt.Sprintf("/faces/batch/%s/cropped/%d.jpg", id, j),
+					Distance: batch.Items[i].Descriptors.DistanceTo(batch.Items[j].Descriptors),
+				})
 			}
-			names2 = append(names2, name)
+		}
+
+		sort.Slice(matches, func(i, j int) bool {
+			return matches[i].Distance < matches[j].Distance
+		})
+
+		var sources []string
+		for name := range batch.Sources {
+			sources = append(sources, fmt.Sprintf("/faces/batch/%s/sources/%s", id, name))
 		}
 
 		c.HTML(http.StatusOK, "faces.html", gin.H{
-			"imageURL1":     imageURL1,
-			"croppedFaces1": allToHTMLBase64(cropped1),
-			"descriptors1":  descr1,
-			"names1":        names1,
-			"imageURL2":     imageURL2,
-			"croppedFaces2": allToHTMLBase64(cropped2),
-			"descriptors2":  descr2,
-			"names2":        names2,
+			"sources": sources,
+			"matches": matches,
 		})
 		return
 	}
 }
 
-func extract(img image.Image,
-	detector *detection.Detector, landmark *landmarks.Landmark,
-	descriptor *descriptors.Descriptor) ([]image.Image, []*descriptors.Descriptors, error) {
-	allDetections, err := detector.Detect(img)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "error detecting faces")
-	}
-
-	detections := allDetections.Above(0.5)
-
-	images := []image.Image{}
-	descrs := []*descriptors.Descriptors{}
-	for _, box := range detections.Boxes {
-		cropped := image.NewRGBA(box)
-		draw.Draw(cropped, box, img, box.Min, draw.Src)
-
-		landmarks, err := landmark.Detect(cropped)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "error detecting landmarks")
-		}
-
-		cropped2 := landmarks.Center(cropped, img)
-
-		descriptors, err := descriptor.Compute(cropped2)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "error computing descriptors")
-		}
-
-		images = append(images, cropped2)
-		descrs = append(descrs, descriptors)
-	}
-
-	return images, descrs, nil
-}
-
-func allToHTMLBase64(img []image.Image) []template.URL {
-	ret := []template.URL{}
-
-	for _, i := range img {
-		ret = append(ret, template.URL(toHTMLBase64(i)))
-	}
-
-	return ret
+type match struct {
+	Name1, Name2       string
+	Cropped1, Cropped2 string
+	Distance           float32
 }
 
 func toHTMLBase64(img image.Image) string {
@@ -141,4 +89,53 @@ func toHTMLBase64(img image.Image) string {
 
 	b64 := base64.StdEncoding.EncodeToString(buf.Bytes())
 	return "data:image/jpeg;base64," + b64
+}
+
+func FaceSourceHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		batchID := c.Param("batchID")
+		name := c.Param("name")
+
+		source := batches[batchID].Sources[name]
+
+		var jpegBytes bytes.Buffer
+		err := jpeg.Encode(&jpegBytes, source, nil)
+		if err != nil {
+			c.AbortWithStatusJSON(
+				http.StatusInternalServerError,
+				fmt.Sprintf("error writing out image: %v", err))
+			return
+		}
+
+		c.Data(http.StatusOK, "image/jpeg", jpegBytes.Bytes())
+	}
+}
+
+func FaceCroppedHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		batchID := c.Param("batchID")
+		name := c.Param("name")
+
+		var i int
+		var err error
+		if i, err = strconv.Atoi(strings.TrimSuffix(name, ".jpg")); err != nil || i >= len(batches[batchID].Items) {
+			c.AbortWithStatusJSON(
+				http.StatusBadRequest,
+				fmt.Sprintf("error parsing image name %q: %v", name, err))
+			return
+		}
+
+		cropped := batches[batchID].Items[i].Cropped
+
+		var jpegBytes bytes.Buffer
+		err = jpeg.Encode(&jpegBytes, cropped, nil)
+		if err != nil {
+			c.AbortWithStatusJSON(
+				http.StatusInternalServerError,
+				fmt.Sprintf("error writing out image: %v", err))
+			return
+		}
+
+		c.Data(http.StatusOK, "image/jpeg", jpegBytes.Bytes())
+	}
 }

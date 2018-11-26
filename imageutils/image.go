@@ -2,11 +2,11 @@ package imageutils
 
 import (
 	"archive/zip"
-	"bytes"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"io"
 	"net/http"
 	"os"
 
@@ -48,12 +48,13 @@ func Scaled(img image.Image, height, width uint) image.Image {
 	return resize.Resize(width, height, img, resize.NearestNeighbor)
 }
 
-func FromZip(zipBytes []byte) (images []image.Image, errs []error) {
-	r, err := zip.NewReader(bytes.NewReader(zipBytes), int64(len(zipBytes)))
+func FromZip(zipFile io.ReaderAt, size int64) (images map[string]image.Image, errs []error) {
+	r, err := zip.NewReader(zipFile, size)
 	if err != nil {
 		return nil, []error{errors.Wrap(err, "error opening zip file")}
 	}
 
+	images = map[string]image.Image{}
 	for _, f := range r.File {
 		rc, err := f.Open()
 		if err != nil {
@@ -73,7 +74,7 @@ func FromZip(zipBytes []byte) (images []image.Image, errs []error) {
 			continue
 		}
 
-		images = append(images, img)
+		images[f.FileHeader.Name] = img
 	}
 
 	return
