@@ -2,7 +2,8 @@ FROM gildasch/tensorflow-go
 
 RUN go get github.com/gin-gonic/gin && \
     go get github.com/nfnt/resize && \
-    go get github.com/pkg/errors
+    go get github.com/pkg/errors && \
+    go get github.com/satori/go.uuid
 
 COPY . /go/src/github.com/gildasch/gildas-ai
 
