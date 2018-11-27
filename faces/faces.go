@@ -45,7 +45,7 @@ func (e *Extractor) Extract(img image.Image) ([]image.Image, []*descriptors.Desc
 		return nil, nil, errors.Wrap(err, "error detecting faces")
 	}
 
-	detections := allDetections.Above(0.5)
+	detections := allDetections.Above(0.6)
 
 	images := []image.Image{}
 	descrs := []*descriptors.Descriptors{}
