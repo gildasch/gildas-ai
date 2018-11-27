@@ -2,16 +2,20 @@ package imageutils
 
 import (
 	"archive/zip"
+	"bytes"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 
+	"github.com/disintegration/imaging"
 	"github.com/nfnt/resize"
 	"github.com/pkg/errors"
+	"github.com/rwcarlsen/goexif/exif"
 )
 
 func FromFile(filename string) (image.Image, error) {
@@ -20,7 +24,7 @@ func FromFile(filename string) (image.Image, error) {
 		return nil, err
 	}
 
-	img, _, err := image.Decode(f)
+	img, _, err := Decode(f)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to decode image")
 	}
@@ -35,7 +39,7 @@ func FromURL(url string) (image.Image, error) {
 	}
 	defer resp.Body.Close()
 
-	img, _, err := image.Decode(resp.Body)
+	img, _, err := Decode(resp.Body)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to decode image")
 	}
@@ -63,7 +67,7 @@ func FromZip(zipFile io.ReaderAt, size int64) (images map[string]image.Image, er
 			continue
 		}
 
-		img, _, err := image.Decode(rc)
+		img, _, err := Decode(rc)
 		rc.Close()
 		if err == image.ErrFormat { // not an image
 			continue
@@ -78,4 +82,55 @@ func FromZip(zipFile io.ReaderAt, size int64) (images map[string]image.Image, er
 	}
 
 	return
+}
+
+// taken from https://github.com/edwvee/exiffix
+func Decode(r io.Reader) (image.Image, string, error) {
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, "", err
+	}
+
+	img, fmt, err := image.Decode(bytes.NewBuffer(b))
+	if err != nil {
+		return img, fmt, err
+	}
+	orientation := getOrientation(bytes.NewBuffer(b))
+	switch orientation {
+	case "1":
+	case "2":
+		img = imaging.FlipV(img)
+	case "3":
+		img = imaging.Rotate180(img)
+	case "4":
+		img = imaging.Rotate180(imaging.FlipV(img))
+	case "5":
+		img = imaging.Rotate270(imaging.FlipV(img))
+	case "6":
+		img = imaging.Rotate270(img)
+	case "7":
+		img = imaging.Rotate90(imaging.FlipV(img))
+	case "8":
+		img = imaging.Rotate90(img)
+	}
+
+	return img, fmt, err
+}
+
+func getOrientation(r io.Reader) string {
+	x, err := exif.Decode(r)
+	if err != nil {
+		return "1"
+	}
+	if x != nil {
+		orient, err := x.Get(exif.Orientation)
+		if err != nil {
+			return "1"
+		}
+		if orient != nil {
+			return orient.String()
+		}
+	}
+
+	return "1"
 }
