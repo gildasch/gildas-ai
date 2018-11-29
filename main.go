@@ -101,10 +101,12 @@ func main() {
 		app.GET("/object", api.ClassifyHandler(classifiers, true))
 
 		batches := map[string]*faces.Batch{}
-		app.Any("/faces", api.FacesHandler(&faces.Extractor{
+		app.GET("/faces", api.FacesHomeHandler(batches))
+		app.POST("/faces", api.FacesPostBatchHandler(&faces.Extractor{
 			Detector:   detector,
 			Landmark:   landmark,
 			Descriptor: descriptor}, batches))
+		app.GET("/faces/batch/:batchID", api.FacesGetBatchHandler(batches))
 		app.GET("/faces/batch/:batchID/sources/:name", api.FaceSourceHandler(batches))
 		app.GET("/faces/batch/:batchID/cropped/:name", api.FaceCroppedHandler(batches))
 

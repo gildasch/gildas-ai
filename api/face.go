@@ -17,7 +17,14 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func FacesHandler(extractor *faces.Extractor, batches map[string]*faces.Batch) gin.HandlerFunc {
+func FacesHomeHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.HTML(http.StatusOK, "faces.html", gin.H{})
+		return
+	}
+}
+
+func FacesPostBatchHandler(extractor *faces.Extractor, batches map[string]*faces.Batch) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		fileHeader, err := c.FormFile("image_zip")
 		if err != nil {
@@ -46,6 +53,22 @@ func FacesHandler(extractor *faces.Extractor, batches map[string]*faces.Batch) g
 		batch = batch.Process(extractor, images)
 		id, _ := uuid.NewV4()
 		batches[id.String()] = batch
+
+		c.Redirect(http.StatusFound, "/faces/batch/"+id.String())
+	}
+}
+
+func FacesGetBatchHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("batchID")
+
+		batch, ok := batches[id]
+		if !ok {
+			c.AbortWithStatusJSON(
+				http.StatusNotFound,
+				fmt.Sprintf("batch %q not found", id))
+			return
+		}
 
 		var matches []match
 		for i := 0; i < len(batch.Items); i++ {
