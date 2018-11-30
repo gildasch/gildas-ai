@@ -1,8 +1,9 @@
-package descriptors
+package faceapi
 
 import (
 	"image"
 
+	"github.com/gildasch/gildas-ai/faces/descriptors"
 	"github.com/nfnt/resize"
 	"github.com/pkg/errors"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
@@ -34,7 +35,7 @@ func (d *Descriptor) Close() error {
 	return d.session.Close()
 }
 
-func (d *Descriptor) Compute(img image.Image) (*Descriptors, error) {
+func (d *Descriptor) Compute(img image.Image) (descriptors.Descriptors, error) {
 	img = resize.Resize(150, 150, img, resize.NearestNeighbor)
 
 	tensor, err := imageToTensor(img, uint(img.Bounds().Dy()), uint(img.Bounds().Dx()))
@@ -67,7 +68,7 @@ func (d *Descriptor) Compute(img image.Image) (*Descriptors, error) {
 		return nil, errors.New("descriptors are empty")
 	}
 
-	out := &Descriptors{}
+	out := make(descriptors.Descriptors, 128)
 
 	for i, v := range res[0] {
 		out[i] = v
@@ -97,16 +98,4 @@ func imageToTensor(img image.Image, imageHeight, imageWidth uint) (*tf.Tensor, e
 
 func convert(value uint32, mean float32) float32 {
 	return (float32(value>>8) - mean) / float32(255)
-}
-
-type Descriptors [128]float32
-
-func (d *Descriptors) DistanceTo(d2 *Descriptors) float32 {
-	sum := float32(0)
-
-	for i := 0; i < 128; i++ {
-		sum += (d[i] - d2[i]) * (d[i] - d2[i])
-	}
-
-	return sum
 }

@@ -1,4 +1,4 @@
-package descriptors
+package faceapi
 
 import (
 	"fmt"

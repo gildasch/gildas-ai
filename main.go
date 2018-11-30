@@ -9,7 +9,7 @@ import (
 
 	"github.com/gildasch/gildas-ai/api"
 	"github.com/gildasch/gildas-ai/faces"
-	"github.com/gildasch/gildas-ai/faces/descriptors"
+	"github.com/gildasch/gildas-ai/faces/descriptors/faceapi"
 	"github.com/gildasch/gildas-ai/faces/detection"
 	"github.com/gildasch/gildas-ai/faces/landmarks"
 	"github.com/gildasch/gildas-ai/imageutils"
@@ -77,7 +77,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	descriptor, err := descriptors.NewDescriptorFromFile("faces/descriptors/descriptorsnet", "myTag")
+	descriptor, err := faceapi.NewDescriptorFromFile("faces/descriptors/faceapi/descriptorsnet", "myTag")
 	if err != nil {
 		log.Fatal(err)
 	}

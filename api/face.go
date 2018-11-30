@@ -73,12 +73,17 @@ func FacesGetBatchHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
 		var matches []match
 		for i := 0; i < len(batch.Items); i++ {
 			for j := i + 1; j < len(batch.Items); j++ {
+				distance, err := batch.Items[i].Descriptors.DistanceTo(batch.Items[j].Descriptors)
+				if err != nil {
+					fmt.Printf("error calculating distance between %d and %d: %v\n", i, j, err)
+					continue
+				}
 				matches = append(matches, match{
 					Name1:    batch.Items[i].Name,
 					Name2:    batch.Items[j].Name,
 					Cropped1: fmt.Sprintf("/faces/batch/%s/cropped/%d.jpg", id, i),
 					Cropped2: fmt.Sprintf("/faces/batch/%s/cropped/%d.jpg", id, j),
-					Distance: batch.Items[i].Descriptors.DistanceTo(batch.Items[j].Descriptors),
+					Distance: distance,
 				})
 			}
 		}

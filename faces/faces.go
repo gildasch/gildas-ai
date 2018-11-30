@@ -5,6 +5,7 @@ import (
 	"image/draw"
 
 	"github.com/gildasch/gildas-ai/faces/descriptors"
+	"github.com/gildasch/gildas-ai/faces/descriptors/faceapi"
 	"github.com/gildasch/gildas-ai/faces/detection"
 	"github.com/gildasch/gildas-ai/faces/landmarks"
 	"github.com/pkg/errors"
@@ -13,7 +14,7 @@ import (
 type Extractor struct {
 	Detector   *detection.Detector
 	Landmark   *landmarks.Landmark
-	Descriptor *descriptors.Descriptor
+	Descriptor *faceapi.Descriptor
 }
 
 func NewDefaultExtractor(modelRoot string) (*Extractor, error) {
@@ -27,7 +28,7 @@ func NewDefaultExtractor(modelRoot string) (*Extractor, error) {
 		return nil, err
 	}
 
-	descriptor, err := descriptors.NewDescriptorFromFile(modelRoot+"/descriptors/descriptorsnet", "myTag")
+	descriptor, err := faceapi.NewDescriptorFromFile(modelRoot+"/descriptors/descriptorsnet", "myTag")
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +40,7 @@ func NewDefaultExtractor(modelRoot string) (*Extractor, error) {
 	}, nil
 }
 
-func (e *Extractor) Extract(img image.Image) ([]image.Image, []*descriptors.Descriptors, error) {
+func (e *Extractor) Extract(img image.Image) ([]image.Image, []descriptors.Descriptors, error) {
 	allDetections, err := e.Detector.Detect(img)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error detecting faces")
@@ -48,7 +49,7 @@ func (e *Extractor) Extract(img image.Image) ([]image.Image, []*descriptors.Desc
 	detections := allDetections.Above(0.6)
 
 	images := []image.Image{}
-	descrs := []*descriptors.Descriptors{}
+	descrs := []descriptors.Descriptors{}
 	for _, box := range detections.Boxes {
 		cropped := image.NewRGBA(box)
 		draw.Draw(cropped, box, img, box.Min, draw.Src)

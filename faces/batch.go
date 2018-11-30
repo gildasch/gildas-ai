@@ -1,6 +1,7 @@
 package faces
 
 import (
+	"fmt"
 	"image"
 
 	"github.com/gildasch/gildas-ai/faces/descriptors"
@@ -18,7 +19,7 @@ type BatchItem struct {
 	Name        string
 	Source      image.Image
 	Cropped     image.Image
-	Descriptors *descriptors.Descriptors
+	Descriptors descriptors.Descriptors
 }
 
 type BatchError struct {
@@ -83,7 +84,11 @@ func (b *Batch) Distances() [][]float32 {
 	for i := 0; i < progress.OK; i++ {
 		distances[i] = make([]float32, progress.OK)
 		for j := 0; j < progress.OK; j++ {
-			distances[i][j] = b.Items[i].Descriptors.DistanceTo(b.Items[j].Descriptors)
+			var err error
+			distances[i][j], err = b.Items[i].Descriptors.DistanceTo(b.Items[j].Descriptors)
+			if err != nil {
+				fmt.Printf("error calculating distance between %d and %d: %v\n", i, j, err)
+			}
 		}
 	}
 
