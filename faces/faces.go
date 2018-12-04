@@ -51,6 +51,10 @@ func (e *Extractor) Extract(img image.Image) ([]image.Image, []descriptors.Descr
 	images := []image.Image{}
 	descrs := []descriptors.Descriptors{}
 	for _, box := range detections.Boxes {
+		if box.Dx() < 45 || box.Dy() < 45 {
+			continue // face is too small
+		}
+
 		cropped := image.NewRGBA(box)
 		draw.Draw(cropped, box, img, box.Min, draw.Src)
 
