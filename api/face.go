@@ -73,10 +73,14 @@ func FacesGetBatchHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
 
 		var matches []match
 		cluster := &faceCluster{}
+
+		for i := 0; i < len(batch.Items); i++ {
+			cluster.distances = append(cluster.distances, make([]float32, len(batch.Items)))
+		}
+
 		for i := 0; i < len(batch.Items); i++ {
 			cluster.Images = append(cluster.Images,
 				fmt.Sprintf("/faces/batch/%s/cropped/%d.jpg?resize=50", id, i))
-			cluster.distances = append(cluster.distances, make([]float32, len(batch.Items)))
 
 			for j := i + 1; j < len(batch.Items); j++ {
 				distance, err := batch.Items[i].Descriptors.DistanceTo(batch.Items[j].Descriptors)
@@ -94,6 +98,7 @@ func FacesGetBatchHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
 				})
 
 				cluster.distances[i][j] = distance
+				cluster.distances[j][i] = distance
 			}
 		}
 
@@ -134,7 +139,7 @@ func (f *faceCluster) Len() int {
 }
 
 func (f *faceCluster) Distance(i, j int) float32 {
-	return f.distances[i][j]
+	return 1000 * f.distances[i][j]
 }
 
 func toHTMLBase64(img image.Image) string {

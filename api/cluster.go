@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 )
@@ -12,6 +13,8 @@ type cluster interface {
 
 type point struct{ X, Y float32 }
 
+const debug = false
+
 func project2D(c cluster) []point {
 	res := make([]point, c.Len())
 
@@ -19,6 +22,15 @@ func project2D(c cluster) []point {
 		for i := 0; i < c.Len(); i++ {
 			for j := 0; j < c.Len(); j++ {
 				res[i] = move(res[i], res[j], c.Distance(i, j))
+			}
+		}
+	}
+
+	if debug {
+		for i := 0; i < c.Len(); i++ {
+			for j := 0; j < c.Len(); j++ {
+				actualDistance := float32(math.Sqrt(float64((res[i].X-res[j].X)*(res[i].X-res[j].X) + (res[i].Y-res[j].Y)*(res[i].Y-res[j].Y))))
+				fmt.Printf("expected: %f, actual: %f\n", c.Distance(i, j), actualDistance)
 			}
 		}
 	}
