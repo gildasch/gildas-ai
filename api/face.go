@@ -14,6 +14,7 @@ import (
 	"github.com/gildasch/gildas-ai/faces"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/gin-gonic/gin"
+	"github.com/nfnt/resize"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -74,7 +75,7 @@ func FacesGetBatchHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
 		cluster := &faceCluster{}
 		for i := 0; i < len(batch.Items); i++ {
 			cluster.Images = append(cluster.Images,
-				fmt.Sprintf("/faces/batch/%s/cropped/%d.jpg", id, i))
+				fmt.Sprintf("/faces/batch/%s/cropped/%d.jpg?resize=50", id, i))
 			cluster.distances = append(cluster.distances, make([]float32, len(batch.Items)))
 
 			for j := i + 1; j < len(batch.Items); j++ {
@@ -179,6 +180,12 @@ func FaceCroppedHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
 		}
 
 		cropped := batches[batchID].Items[i].Cropped
+
+		if maxStr := c.Query("resize"); maxStr != "" {
+			if max, err := strconv.Atoi(maxStr); err == nil {
+				cropped = resize.Resize(uint(max), uint(max), cropped, resize.NearestNeighbor)
+			}
+		}
 
 		var jpegBytes bytes.Buffer
 		err = jpeg.Encode(&jpegBytes, cropped, nil)
