@@ -28,7 +28,7 @@ func NewDefaultExtractor(modelRoot string) (*Extractor, error) {
 		return nil, err
 	}
 
-	descriptor, err := faceapi.NewDescriptorFromFile(modelRoot+"/descriptors/descriptorsnet", "myTag")
+	descriptor, err := faceapi.NewDescriptorFromFile(modelRoot+"/descriptors/faceapi/descriptorsnet", "myTag")
 	if err != nil {
 		return nil, err
 	}
