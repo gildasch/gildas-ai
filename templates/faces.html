@@ -29,6 +29,8 @@
           max-height: 100px;
       }
     </style>
+
+    <script src="/static/Chart.js"></script>
   </head>
   <body>
     <form action="/faces" method="post" style="text-align:center;" enctype="multipart/form-data">
@@ -43,9 +45,68 @@
     </ul>
 
     <ul class='matches'>
+      <div class="content">
+		<div class="wrapper"><canvas id="chart-0"></canvas></div>
+	  </div>
+
       {{ range $match := .matches }}
       <li><img src="{{ $match.Cropped1 }}" /> <img src="{{ $match.Cropped2 }}" /> {{ $match.Distance }}</li>
       {{ end }}
     </ul>
+
+    <script>
+	 var data = {
+	   datasets: [{
+		 data: [
+           {{ range $point := .cluster.Points }}
+           {
+             x: {{ $point.X }},
+             y: {{ $point.Y }},
+             v: 1000
+           },
+           {{ end }}
+           {
+             x: 0,
+             y: 0
+           }
+         ]
+	   }]
+	 };
+
+     var images = [];
+
+     {{ range $i, $image := .cluster.Images }}
+     images[{{ $i }}] = new Image();
+     images[{{ $i }}].src = '{{ $image }}';
+     {{ end }}
+
+	 var options = {
+	   aspectRatio: 1,
+	   legend: false,
+	   tooltips: false,
+
+       scales: {
+         xAxes: [{
+           display: false
+         }],
+         yAxes: [{
+           display: false
+         }]
+       },
+
+	   elements: {
+		 point: {
+           pointStyle: images
+		 }
+	   }
+	 };
+
+	 var chart = new Chart('chart-0', {
+	   type: 'bubble',
+	   data: data,
+	   options: options
+	 });
+	</script>
+
   </body>
 </html>

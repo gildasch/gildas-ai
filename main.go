@@ -96,6 +96,7 @@ func main() {
 		}
 
 		app := gin.Default()
+		app.Static("/static", "./static")
 		app.LoadHTMLFiles("templates/predictions.html", "templates/faces.html")
 		app.GET("/object/api", api.ClassifyHandler(classifiers, false))
 		app.GET("/object", api.ClassifyHandler(classifiers, true))

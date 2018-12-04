@@ -71,13 +71,19 @@ func FacesGetBatchHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
 		}
 
 		var matches []match
+		cluster := &faceCluster{}
 		for i := 0; i < len(batch.Items); i++ {
+			cluster.Images = append(cluster.Images,
+				fmt.Sprintf("/faces/batch/%s/cropped/%d.jpg", id, i))
+			cluster.distances = append(cluster.distances, make([]float32, len(batch.Items)))
+
 			for j := i + 1; j < len(batch.Items); j++ {
 				distance, err := batch.Items[i].Descriptors.DistanceTo(batch.Items[j].Descriptors)
 				if err != nil {
 					fmt.Printf("error calculating distance between %d and %d: %v\n", i, j, err)
 					continue
 				}
+
 				matches = append(matches, match{
 					Name1:    batch.Items[i].Name,
 					Name2:    batch.Items[j].Name,
@@ -85,6 +91,8 @@ func FacesGetBatchHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
 					Cropped2: fmt.Sprintf("/faces/batch/%s/cropped/%d.jpg", id, j),
 					Distance: distance,
 				})
+
+				cluster.distances[i][j] = distance
 			}
 		}
 
@@ -97,9 +105,12 @@ func FacesGetBatchHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
 			sources = append(sources, fmt.Sprintf("/faces/batch/%s/sources/%s", id, name))
 		}
 
+		cluster.Points = project2D(cluster)
+
 		c.HTML(http.StatusOK, "faces.html", gin.H{
 			"sources": sources,
 			"matches": matches,
+			"cluster": cluster,
 		})
 		return
 	}
@@ -109,6 +120,20 @@ type match struct {
 	Name1, Name2       string
 	Cropped1, Cropped2 string
 	Distance           float32
+}
+
+type faceCluster struct {
+	Images    []string
+	distances [][]float32
+	Points    []point
+}
+
+func (f *faceCluster) Len() int {
+	return len(f.Images)
+}
+
+func (f *faceCluster) Distance(i, j int) float32 {
+	return f.distances[i][j]
 }
 
 func toHTMLBase64(img image.Image) string {
