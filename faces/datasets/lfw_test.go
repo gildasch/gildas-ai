@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const threshold = 0.52
+const threshold = 0.62
 
 func TestLFW(t *testing.T) {
 	extractor, err := faces.NewDefaultExtractor("..")
@@ -25,7 +25,7 @@ func TestLFW(t *testing.T) {
 
 	fmt.Println(len(descrs))
 
-	var total, falseMatch, falseNonMatch int
+	var totalMatch, falseMatch, totalNonMatch, falseNonMatch int
 	for name1, dd1 := range descrs {
 		for _, d1 := range dd1 {
 			for name2, dd2 := range descrs {
@@ -34,16 +34,22 @@ func TestLFW(t *testing.T) {
 					require.NoError(t, err)
 
 					match := distance < threshold
-					total++
-					if match && name1 != name2 {
-						falseMatch++
+
+					if name1 != name2 {
+						totalNonMatch++
+						if match {
+							falseMatch++
+						}
 					}
-					if !match && name1 == name2 {
-						falseNonMatch++
+					if name1 == name2 {
+						totalMatch++
+						if !match {
+							falseNonMatch++
+						}
 					}
 					fmt.Printf("\rtotal %d / false match %d (%.2f%%) / false non-match %d (%.2f%%)",
-						total, falseMatch, (100 * float32(falseMatch) / float32(total)),
-						falseNonMatch, (100 * float32(falseNonMatch) / float32(total)))
+						totalMatch+totalNonMatch, falseMatch, (100 * float32(falseMatch) / float32(totalNonMatch)),
+						falseNonMatch, (100 * float32(falseNonMatch) / float32(totalMatch)))
 				}
 			}
 		}
@@ -57,7 +63,7 @@ func extract(extractor *faces.Extractor) (map[string][]descriptors.Descriptors, 
 		descrs = map[string][]descriptors.Descriptors{}
 		fmt.Println("Extraction...")
 		for n, name := range smallSetWithMultiplePictures {
-			filenames, err := filepath.Glob("lfw-deepfunneled/" + name + "/*.jpg")
+			filenames, err := filepath.Glob("lfw/" + name + "/*.jpg")
 			if err != nil {
 				return nil, err
 			}
