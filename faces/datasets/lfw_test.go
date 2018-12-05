@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/gildasch/gildas-ai/faces"
@@ -62,7 +63,15 @@ func extract(extractor *faces.Extractor) (map[string][]descriptors.Descriptors, 
 	if !ok {
 		descrs = map[string][]descriptors.Descriptors{}
 		fmt.Println("Extraction...")
-		for n, name := range smallSetWithMultiplePictures {
+
+		// nameList := smallSetWithMultiplePictures
+		nameList, err := filepath.Glob("lfw/*")
+		if err != nil {
+			return nil, err
+		}
+
+		for n, name := range nameList {
+			name = strings.TrimPrefix(name, "lfw/")
 			filenames, err := filepath.Glob("lfw/" + name + "/*.jpg")
 			if err != nil {
 				return nil, err
