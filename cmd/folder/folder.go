@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -20,7 +19,7 @@ import (
 const (
 	threshold     = 0.1
 	noCache       = false
-	onlyFromCache = true
+	onlyFromCache = false
 )
 
 func usage() {
@@ -46,17 +45,18 @@ func main() {
 
 	var classifier Classifier
 	if !onlyFromCache {
-		resnet := &tensor.Model{
-			ModelName:   modelRootFolder + "/resnet",
-			TagName:     "myTag",
-			InputLayer:  "input_1",
-			OutputLayer: "fc1000/Softmax",
-			ImageMode:   tensor.ImageModeCaffe,
-			Labels:      "imagenet_class_index.json",
-			ImageHeight: 224,
-			ImageWidth:  224,
+		pnasnet := &tensor.Model{
+			ModelName:       modelRootFolder + "/pnasnet",
+			TagName:         "myTag",
+			InputLayer:      "module/hub_input/images",
+			OutputLayer:     "module/final_layer/predictions",
+			ImageMode:       tensor.ImageModeTensorflowPositive,
+			Labels:          "imagenet_class_index.json",
+			ImageHeight:     331,
+			ImageWidth:      331,
+			IndexCorrection: -1,
 		}
-		close, err := resnet.Load()
+		close, err := pnasnet.Load()
 		if err != nil {
 			log.Fatal("could not load classifier", err)
 		}
@@ -65,13 +65,13 @@ func main() {
 				fmt.Println("error closing classifier:", err)
 			}
 		}()
-		classifier = resnet
+		classifier = pnasnet
 	}
 
 	var cache Cache
 	if !noCache {
 		localCache := &LocalCache{
-			CacheDir: imageFolder + "/.inception",
+			CacheFile: imageFolder + "/.inception.json",
 		}
 		cache = localCache
 	}
@@ -166,13 +166,26 @@ func find(objects map[string][]string, query string) []string {
 }
 
 type LocalCache struct {
-	CacheDir string
+	CacheFile string
+
+	inceptions map[string][]string
+	saved      int
 }
 
 func (l *LocalCache) Inception(file string, inception func() ([]string, error)) ([]string, error) {
-	cacheFile := cacheName(l.CacheDir, file)
+	if l.inceptions == nil {
+		var err error
+		l.inceptions, err = readCache(l.CacheFile)
+		if err == nil {
+			l.saved = len(l.inceptions)
+		} else {
+			fmt.Println("no cache found")
+			l.inceptions = map[string][]string{}
+			l.saved = 0
+		}
+	}
 
-	if preds, ok := readCache(cacheFile); ok {
+	if preds, ok := l.inceptions[file]; ok {
 		fmt.Printf("loaded file %q from cache\n", file)
 		return preds, nil
 	}
@@ -182,49 +195,45 @@ func (l *LocalCache) Inception(file string, inception func() ([]string, error)) 
 		return nil, err
 	}
 
-	saveCache(l.CacheDir, cacheFile, preds)
+	l.inceptions[file] = preds
+
+	if len(l.inceptions) > l.saved+10 {
+		err := saveCache(l.CacheFile, l.inceptions)
+		if err != nil {
+			fmt.Println("error saving cache:", err)
+		} else {
+			l.saved = len(l.inceptions)
+		}
+	}
 
 	return preds, nil
 }
 
-func cacheName(cacheDir, file string) string {
-	return cacheDir + "/" + fmt.Sprintf("%x", sha1.Sum([]byte(file))) + ".json"
-}
-
-func readCache(cacheFile string) ([]string, bool) {
+func readCache(cacheFile string) (map[string][]string, error) {
 	b, err := ioutil.ReadFile(cacheFile)
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
 
-	var preds []string
-	err = json.Unmarshal(b, &preds)
+	var inceptions map[string][]string
+	err = json.Unmarshal(b, &inceptions)
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
 
-	return preds, true
+	return inceptions, nil
 }
 
-func saveCache(cacheDir, cacheFile string, preds []string) {
-	b, err := json.Marshal(preds)
+func saveCache(cacheFile string, inceptions map[string][]string) error {
+	b, err := json.Marshal(inceptions)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
 
 	err = ioutil.WriteFile(cacheFile, b, 0644)
 	if err != nil {
-		err = os.Mkdir(cacheDir, 0755)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		err = ioutil.WriteFile(cacheFile, b, 0644)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+		return err
 	}
+
+	return nil
 }
