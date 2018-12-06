@@ -2,8 +2,11 @@ package main
 
 import (
 	"bufio"
+	"crypto/sha1"
+	"encoding/json"
 	"fmt"
 	"image"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -11,6 +14,7 @@ import (
 
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/gildasch/gildas-ai/tensor"
+	"github.com/pkg/errors"
 )
 
 const threshold = 0.1
@@ -23,14 +27,18 @@ type Classifier interface {
 	Inception(img image.Image) (*tensor.Predictions, error)
 }
 
+type Cache interface {
+	Inception(file string, classifier Classifier, img image.Image) ([]string, error)
+}
+
 func main() {
 	if len(os.Args) < 3 {
 		usage()
 		return
 	}
 
-	modelRootFolder := os.Args[1]
-	imageFolder := os.Args[2]
+	modelRootFolder := strings.TrimSuffix(os.Args[1], "/")
+	imageFolder := strings.TrimSuffix(os.Args[2], "/")
 
 	resnet := &tensor.Model{
 		ModelName:   modelRootFolder + "/resnet",
@@ -52,7 +60,11 @@ func main() {
 		}
 	}()
 
-	objects, err := inspectFolder(resnet, imageFolder)
+	cache := &LocalCache{
+		CacheDir: imageFolder + "/.inception",
+	}
+
+	objects, err := inspectFolder(cache, resnet, imageFolder)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,15 +83,15 @@ func main() {
 	}
 }
 
-func inspectFolder(classifier Classifier, folder string) (map[string][]string, error) {
-	files, err := filepath.Glob(strings.TrimSuffix(folder, "/") + "/*")
+func inspectFolder(cache Cache, classifier Classifier, folder string) (map[string][]string, error) {
+	files, err := filepath.Glob(folder + "/*")
 	if err != nil {
 		return nil, err
 	}
 
 	objects := map[string][]string{}
 	for i, file := range files {
-		fmt.Printf("\r(%d/%d) processing %s", i, len(files), file)
+		fmt.Printf("\r(%d/%d) processing %s", i+1, len(files), file)
 
 		img, err := imageutils.FromFile(file)
 		if err != nil {
@@ -87,15 +99,14 @@ func inspectFolder(classifier Classifier, folder string) (map[string][]string, e
 			continue
 		}
 
-		preds, err := classifier.Inception(img)
+		preds, err := cache.Inception(file, classifier, img)
 		if err != nil {
-			fmt.Printf("\nerror executing inception on %s: %v\n", file, err)
+			fmt.Printf("\n%v\n", err)
 			continue
 		}
 
-		for _, p := range preds.Above(threshold) {
-			label := strings.ToLower(p.Label)
-			objects[label] = append(objects[label], file)
+		for _, p := range preds {
+			objects[p] = append(objects[p], file)
 		}
 	}
 	fmt.Println()
@@ -106,4 +117,72 @@ func inspectFolder(classifier Classifier, folder string) (map[string][]string, e
 func find(objects map[string][]string, query string) []string {
 	query = strings.ToLower(strings.TrimSuffix(query, "\n"))
 	return objects[query]
+}
+
+type LocalCache struct {
+	CacheDir string
+}
+
+func (l *LocalCache) Inception(file string, classifier Classifier, img image.Image) ([]string, error) {
+	cacheFile := cacheName(l.CacheDir, file)
+
+	if preds, ok := readCache(cacheFile); ok {
+		return preds, nil
+	}
+
+	predictions, err := classifier.Inception(img)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error executing inception on %s", file)
+	}
+
+	preds := []string{}
+	for _, p := range predictions.Above(threshold) {
+		preds = append(preds, strings.ToLower(p.Label))
+	}
+
+	saveCache(l.CacheDir, cacheFile, preds)
+
+	return preds, nil
+}
+
+func cacheName(cacheDir, file string) string {
+	return cacheDir + "/" + fmt.Sprintf("%x", sha1.Sum([]byte(file))) + ".json"
+}
+
+func readCache(cacheFile string) ([]string, bool) {
+	b, err := ioutil.ReadFile(cacheFile)
+	if err != nil {
+		return nil, false
+	}
+
+	var preds []string
+	err = json.Unmarshal(b, &preds)
+	if err != nil {
+		return nil, false
+	}
+
+	return preds, true
+}
+
+func saveCache(cacheDir, cacheFile string, preds []string) {
+	b, err := json.Marshal(preds)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	err = ioutil.WriteFile(cacheFile, b, 0644)
+	if err != nil {
+		err = os.Mkdir(cacheDir, 0755)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		err = ioutil.WriteFile(cacheFile, b, 0644)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
 }
