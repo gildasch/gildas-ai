@@ -15,7 +15,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const threshold = 0.62
+const (
+	threshold           = 0.62
+	minimumMatchTest    = 2000
+	minimumNonMatchTest = 10000
+)
 
 func TestLFW(t *testing.T) {
 	extractor, err := faces.NewDefaultExtractor("..")
@@ -27,10 +31,57 @@ func TestLFW(t *testing.T) {
 	fmt.Println(len(descrs))
 
 	var totalMatch, falseMatch, totalNonMatch, falseNonMatch int
+evaluation:
 	for name1, dd1 := range descrs {
 		for _, d1 := range dd1 {
 			for name2, dd2 := range descrs {
 				for _, d2 := range dd2 {
+					distance, err := d1.DistanceTo(d2)
+					require.NoError(t, err)
+
+					match := distance < threshold
+
+					if name1 != name2 {
+						totalNonMatch++
+						if match {
+							falseMatch++
+						}
+					}
+					if name1 == name2 {
+						totalMatch++
+						if !match {
+							falseNonMatch++
+						}
+					}
+					fmt.Printf("\rtotal %d / false match %d (%.2f%%) / false non-match %d (%.2f%%)",
+						totalMatch+totalNonMatch, falseMatch, (100 * float32(falseMatch) / float32(totalNonMatch)),
+						falseNonMatch, (100 * float32(falseNonMatch) / float32(totalMatch)))
+
+					if totalNonMatch >= minimumNonMatchTest && totalMatch >= minimumMatchTest {
+						fmt.Printf("\nstopped at %d non-match tests and %d match test\n", totalNonMatch, totalMatch)
+						break evaluation
+					}
+				}
+			}
+		}
+	}
+	fmt.Println()
+}
+
+func TestLFWOnSubset(t *testing.T) {
+	extractor, err := faces.NewDefaultExtractor("..")
+	require.NoError(t, err)
+
+	descrs, err := extract(extractor)
+	require.NoError(t, err)
+
+	fmt.Println(len(descrs))
+
+	var totalMatch, falseMatch, totalNonMatch, falseNonMatch int
+	for _, name1 := range smallSetWithMultiplePictures {
+		for _, d1 := range descrs[name1] {
+			for _, name2 := range smallSetWithMultiplePictures {
+				for _, d2 := range descrs[name2] {
 					distance, err := d1.DistanceTo(d2)
 					require.NoError(t, err)
 
