@@ -17,7 +17,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-const threshold = 0.1
+const (
+	threshold     = 0.1
+	noCache       = false
+	onlyFromCache = true
+)
 
 func usage() {
 	fmt.Printf("%s [model-root-folder] [image-folder]\n", os.Args[0])
@@ -28,7 +32,7 @@ type Classifier interface {
 }
 
 type Cache interface {
-	Inception(file string, classifier Classifier, img image.Image) ([]string, error)
+	Inception(file string, inception func() ([]string, error)) ([]string, error)
 }
 
 func main() {
@@ -40,31 +44,39 @@ func main() {
 	modelRootFolder := strings.TrimSuffix(os.Args[1], "/")
 	imageFolder := strings.TrimSuffix(os.Args[2], "/")
 
-	resnet := &tensor.Model{
-		ModelName:   modelRootFolder + "/resnet",
-		TagName:     "myTag",
-		InputLayer:  "input_1",
-		OutputLayer: "fc1000/Softmax",
-		ImageMode:   tensor.ImageModeCaffe,
-		Labels:      "imagenet_class_index.json",
-		ImageHeight: 224,
-		ImageWidth:  224,
-	}
-	close, err := resnet.Load()
-	if err != nil {
-		log.Fatal("could not load classifier", err)
-	}
-	defer func() {
-		if err := close(); err != nil {
-			fmt.Println("error closing classifier:", err)
+	var classifier Classifier
+	if !onlyFromCache {
+		resnet := &tensor.Model{
+			ModelName:   modelRootFolder + "/resnet",
+			TagName:     "myTag",
+			InputLayer:  "input_1",
+			OutputLayer: "fc1000/Softmax",
+			ImageMode:   tensor.ImageModeCaffe,
+			Labels:      "imagenet_class_index.json",
+			ImageHeight: 224,
+			ImageWidth:  224,
 		}
-	}()
-
-	cache := &LocalCache{
-		CacheDir: imageFolder + "/.inception",
+		close, err := resnet.Load()
+		if err != nil {
+			log.Fatal("could not load classifier", err)
+		}
+		defer func() {
+			if err := close(); err != nil {
+				fmt.Println("error closing classifier:", err)
+			}
+		}()
+		classifier = resnet
 	}
 
-	objects, err := inspectFolder(cache, resnet, imageFolder)
+	var cache Cache
+	if !noCache {
+		localCache := &LocalCache{
+			CacheDir: imageFolder + "/.inception",
+		}
+		cache = localCache
+	}
+
+	objects, err := inspectFolder(cache, classifier, imageFolder)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -91,18 +103,48 @@ func inspectFolder(cache Cache, classifier Classifier, folder string) (map[strin
 
 	objects := map[string][]string{}
 	for i, file := range files {
-		fmt.Printf("\r(%d/%d) processing %s", i+1, len(files), file)
+		fmt.Printf("(%d/%d) processing %s\n", i+1, len(files), file)
 
 		img, err := imageutils.FromFile(file)
 		if err != nil {
-			fmt.Printf("\nerror processing file %s: %v\n", file, err)
+			fmt.Printf("error processing file %s: %v\n", file, err)
 			continue
 		}
 
-		preds, err := cache.Inception(file, classifier, img)
-		if err != nil {
-			fmt.Printf("\n%v\n", err)
-			continue
+		var inception func() ([]string, error)
+		if classifier != nil {
+			inception = func() ([]string, error) {
+				predictions, err := classifier.Inception(img)
+				if err != nil {
+					return nil, errors.Wrapf(err, "error executing inception on %s", file)
+				}
+
+				preds := []string{}
+				for _, p := range predictions.Above(threshold) {
+					preds = append(preds, strings.ToLower(p.Label))
+				}
+
+				return preds, nil
+			}
+		} else {
+			inception = func() ([]string, error) {
+				return nil, errors.New("no classifier given")
+			}
+		}
+
+		var preds []string
+		if cache != nil {
+			preds, err = cache.Inception(file, inception)
+			if err != nil {
+				fmt.Printf("%v\n", err)
+				continue
+			}
+		} else {
+			preds, err = inception()
+			if err != nil {
+				fmt.Printf("error executing inception on %s: %v\n", file, err)
+				continue
+			}
 		}
 
 		for _, p := range preds {
@@ -123,21 +165,17 @@ type LocalCache struct {
 	CacheDir string
 }
 
-func (l *LocalCache) Inception(file string, classifier Classifier, img image.Image) ([]string, error) {
+func (l *LocalCache) Inception(file string, inception func() ([]string, error)) ([]string, error) {
 	cacheFile := cacheName(l.CacheDir, file)
 
 	if preds, ok := readCache(cacheFile); ok {
+		fmt.Printf("loaded file %q from cache\n", file)
 		return preds, nil
 	}
 
-	predictions, err := classifier.Inception(img)
+	preds, err := inception()
 	if err != nil {
-		return nil, errors.Wrapf(err, "error executing inception on %s", file)
-	}
-
-	preds := []string{}
-	for _, p := range predictions.Above(threshold) {
-		preds = append(preds, strings.ToLower(p.Label))
+		return nil, err
 	}
 
 	saveCache(l.CacheDir, cacheFile, preds)
