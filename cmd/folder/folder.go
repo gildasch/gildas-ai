@@ -96,6 +96,10 @@ func main() {
 }
 
 func inspectFolder(cache Cache, classifier Classifier, folder string) (map[string][]string, error) {
+	if cache == nil && classifier == nil {
+		return nil, errors.New("cannot inspect without cache or classifier")
+	}
+
 	files, err := filepath.Glob(folder + "/*")
 	if err != nil {
 		return nil, err
