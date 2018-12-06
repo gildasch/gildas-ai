@@ -68,6 +68,23 @@ func (p *Predictions) Best(n int) []Prediction {
 	return ret[:n]
 }
 
+func (p *Predictions) Above(threshold float32) []Prediction {
+	var ret []Prediction
+
+	for i, score := range p.scores {
+		if score < threshold {
+			continue
+		}
+
+		ret = append(ret, Prediction{
+			Label: p.labels.Get(i),
+			Score: score,
+		})
+	}
+
+	return ret
+}
+
 func (m *Model) Inception(img image.Image) (*Predictions, error) {
 	img = imageutils.Scaled(img, m.ImageHeight, m.ImageWidth)
 

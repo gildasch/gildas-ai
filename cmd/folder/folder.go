@@ -1,21 +1,26 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"image"
-	"image/jpeg"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/gildasch/gildas-ai/faces"
-	"github.com/gildasch/gildas-ai/faces/descriptors"
 	"github.com/gildasch/gildas-ai/imageutils"
+	"github.com/gildasch/gildas-ai/tensor"
 )
 
+const threshold = 0.1
+
 func usage() {
-	fmt.Printf("%s [model-root-folder] [faces-folder]\n", os.Args[0])
+	fmt.Printf("%s [model-root-folder] [image-folder]\n", os.Args[0])
+}
+
+type Classifier interface {
+	Inception(img image.Image) (*tensor.Predictions, error)
 }
 
 func main() {
@@ -25,87 +30,80 @@ func main() {
 	}
 
 	modelRootFolder := os.Args[1]
-	facesFolder := os.Args[2]
+	imageFolder := os.Args[2]
 
-	extractor, err := faces.NewDefaultExtractor(modelRootFolder)
+	resnet := &tensor.Model{
+		ModelName:   modelRootFolder + "/resnet",
+		TagName:     "myTag",
+		InputLayer:  "input_1",
+		OutputLayer: "fc1000/Softmax",
+		ImageMode:   tensor.ImageModeCaffe,
+		Labels:      "imagenet_class_index.json",
+		ImageHeight: 224,
+		ImageWidth:  224,
+	}
+	close, err := resnet.Load()
+	if err != nil {
+		log.Fatal("could not load classifier", err)
+	}
+	defer func() {
+		if err := close(); err != nil {
+			fmt.Println("error closing classifier:", err)
+		}
+	}()
+
+	objects, err := inspectFolder(resnet, imageFolder)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	descrs, err := calculateDescriptors(extractor, facesFolder)
-	if err != nil {
-		log.Fatal(err)
+	fmt.Println(objects)
+
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Printf("search: ")
+		query, _ := reader.ReadString('\n')
+
+		fmt.Println()
+		for _, result := range find(objects, query) {
+			fmt.Println(result)
+		}
 	}
-
-	clusters := calculateClusters(descrs, 0.55)
-
-	fmt.Println(clusters)
 }
 
-func calculateDescriptors(extractor *faces.Extractor,
-	facesFolder string) (map[string]descriptors.Descriptors, error) {
-	faceFiles, err := filepath.Glob(strings.TrimSuffix(facesFolder, "/") + "/*")
+func inspectFolder(classifier Classifier, folder string) (map[string][]string, error) {
+	files, err := filepath.Glob(strings.TrimSuffix(folder, "/") + "/*")
 	if err != nil {
 		return nil, err
 	}
 
-	descrs := map[string]descriptors.Descriptors{}
-	for _, faceFile := range faceFiles {
-		fmt.Printf("processing %s\n", faceFile)
+	objects := map[string][]string{}
+	for i, file := range files {
+		fmt.Printf("\r(%d/%d) processing %s", i, len(files), file)
 
-		img, err := imageutils.FromFile(faceFile)
+		img, err := imageutils.FromFile(file)
 		if err != nil {
-			fmt.Println("error processing file %s: %v\n", faceFile, err)
+			fmt.Printf("\nerror processing file %s: %v\n", file, err)
 			continue
 		}
 
-		ii, dd, err := extractor.Extract(img)
+		preds, err := classifier.Inception(img)
 		if err != nil {
-			fmt.Println("error extracting from %s: %v\n", faceFile, err)
+			fmt.Printf("\nerror executing inception on %s: %v\n", file, err)
 			continue
 		}
 
-		if len(dd) < 1 {
-			fmt.Printf("no face found in %s: %v\n", faceFile, err)
-			continue
-		}
-
-		for i, d := range dd {
-			descrs[fmt.Sprintf("%s.%d", faceFile, i)] = d
-			saveImage(fmt.Sprintf("%s.%d", faceFile, i), ii[i])
+		for _, p := range preds.Above(threshold) {
+			label := strings.ToLower(p.Label)
+			objects[label] = append(objects[label], file)
 		}
 	}
+	fmt.Println()
 
-	return descrs, nil
+	return objects, nil
 }
 
-func saveImage(filename string, img image.Image) {
-	f, err := os.Create(filename + ".cropped.jpg")
-	if err != nil {
-		fmt.Printf("error saving %q: %v", filename, err)
-		return
-	}
-	jpeg.Encode(f, img, nil)
-}
-
-func calculateClusters(descrs map[string]descriptors.Descriptors, threshold float32) [][]string {
-	clusters := [][]string{}
-descrsloop:
-	for name, descr := range descrs {
-		for i, cc := range clusters {
-			for _, c := range cc {
-				distance, err := descr.DistanceTo(descrs[c])
-				if err != nil {
-					continue
-				}
-				if distance < threshold {
-					clusters[i] = append(clusters[i], name)
-					continue descrsloop
-				}
-			}
-		}
-		clusters = append(clusters, []string{name})
-	}
-
-	return clusters
+func find(objects map[string][]string, query string) []string {
+	query = strings.ToLower(strings.TrimSuffix(query, "\n"))
+	return objects[query]
 }
