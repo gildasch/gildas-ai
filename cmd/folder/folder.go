@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gildasch/gildas-ai/cmd/folder/cache/localcache"
+	"github.com/gildasch/gildas-ai/cmd/folder/cache/sqlite"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/gildasch/gildas-ai/tensor"
 	"github.com/pkg/errors"
@@ -30,7 +30,7 @@ type Classifier interface {
 }
 
 type Cache interface {
-	Inception(file string, inception func() ([]string, error)) ([]string, error)
+	Inception(file, network string, inception func() ([]tensor.Prediction, error)) ([]tensor.Prediction, error)
 }
 
 func main() {
@@ -69,18 +69,18 @@ func main() {
 
 	var cache Cache
 	if !noCache {
-		localCache := &localcache.LocalCache{
-			CacheFile: imageFolder + "/.inception.json",
+		sqliteCache, err := sqlite.NewCache(imageFolder + "/.inception.sqlite")
+		if err != nil {
+			log.Fatal(err)
 		}
-		cache = localCache
+
+		cache = sqliteCache
 	}
 
 	objects, err := inspectFolder(cache, classifier, imageFolder)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println(objects)
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -114,30 +114,25 @@ func inspectFolder(cache Cache, classifier Classifier, folder string) (map[strin
 			continue
 		}
 
-		var inception func() ([]string, error)
+		var inception func() ([]tensor.Prediction, error)
 		if classifier != nil {
-			inception = func() ([]string, error) {
+			inception = func() ([]tensor.Prediction, error) {
 				predictions, err := classifier.Inception(img)
 				if err != nil {
 					return nil, errors.Wrapf(err, "error executing inception on %s", file)
 				}
 
-				preds := []string{}
-				for _, p := range predictions.Above(threshold) {
-					preds = append(preds, strings.ToLower(p.Label))
-				}
-
-				return preds, nil
+				return predictions.Best(10), nil
 			}
 		} else {
-			inception = func() ([]string, error) {
+			inception = func() ([]tensor.Prediction, error) {
 				return nil, errors.New("no classifier given")
 			}
 		}
 
-		var preds []string
+		var preds []tensor.Prediction
 		if cache != nil {
-			preds, err = cache.Inception(file, inception)
+			preds, err = cache.Inception(file, "pnasnet", inception)
 			if err != nil {
 				fmt.Printf("%v\n", err)
 				continue
@@ -151,7 +146,7 @@ func inspectFolder(cache Cache, classifier Classifier, folder string) (map[strin
 		}
 
 		for _, p := range preds {
-			objects[p] = append(objects[p], file)
+			objects[p.Label] = append(objects[p.Label], file)
 		}
 	}
 	fmt.Println()
