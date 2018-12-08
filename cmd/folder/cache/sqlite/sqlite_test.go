@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gildasch/gildas-ai/tensor"
+	"github.com/gildasch/gildas-ai/objects/classifiers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +16,7 @@ func TestCache(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(tempSQLiteFile)
 
-	expected := []tensor.Prediction{{
+	expected := []classifiers.Prediction{{
 		Label: "something cool",
 		Score: 0.98,
 	}, {
@@ -24,7 +24,7 @@ func TestCache(t *testing.T) {
 		Score: 0.18,
 	}}
 
-	inception := func() ([]tensor.Prediction, error) {
+	inception := func() ([]classifiers.Prediction, error) {
 		return expected, nil
 	}
 

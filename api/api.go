@@ -8,19 +8,19 @@ import (
 	"time"
 
 	"github.com/gildasch/gildas-ai/imageutils"
-	"github.com/gildasch/gildas-ai/tensor"
+	"github.com/gildasch/gildas-ai/objects/classifiers"
 	"github.com/gin-gonic/gin"
 )
 
 type Classifier interface {
-	Inception(img image.Image) (*tensor.Predictions, error)
+	Inception(img image.Image) (*classifiers.Predictions, error)
 }
 
 type classifierResult struct {
-	Classifier  string              `json:"classifier"`
-	Predictions []tensor.Prediction `json:"predictions,omitempty"`
-	Timing      string              `json:"timing"`
-	Error       error               `json:"error"`
+	Classifier  string                   `json:"classifier"`
+	Predictions []classifiers.Prediction `json:"predictions,omitempty"`
+	Timing      string                   `json:"timing"`
+	Error       error                    `json:"error"`
 }
 
 func ClassifyHandler(classifiers map[string]Classifier, html bool) gin.HandlerFunc {

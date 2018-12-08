@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/gildasch/gildas-ai/tensor"
+	"github.com/gildasch/gildas-ai/objects/classifiers"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
 )
@@ -37,16 +37,16 @@ create table if not exists predictions (
 	return &Cache{db}, nil
 }
 
-func (c *Cache) Inception(file, network string, inception func() ([]tensor.Prediction, error)) ([]tensor.Prediction, error) {
+func (c *Cache) Inception(file, network string, inception func() ([]classifiers.Prediction, error)) ([]classifiers.Prediction, error) {
 	rows, err := c.Query("select label, score from predictions where filename=$1 and network=$2", file, network)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error querying sqlite cache for %q / %q", file, network)
 	}
 	defer rows.Close()
 
-	var preds []tensor.Prediction
+	var preds []classifiers.Prediction
 	for rows.Next() {
-		var p tensor.Prediction
+		var p classifiers.Prediction
 		err := rows.Scan(&p.Label, &p.Score)
 		if err != nil {
 			return nil, errors.Wrapf(err, "error scanning sqlite cache for %q / %q", file, network)

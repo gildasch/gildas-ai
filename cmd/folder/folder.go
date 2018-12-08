@@ -11,7 +11,7 @@ import (
 
 	"github.com/gildasch/gildas-ai/cmd/folder/cache/sqlite"
 	"github.com/gildasch/gildas-ai/imageutils"
-	"github.com/gildasch/gildas-ai/tensor"
+	"github.com/gildasch/gildas-ai/objects/classifiers"
 	"github.com/pkg/errors"
 )
 
@@ -26,11 +26,11 @@ func usage() {
 }
 
 type Classifier interface {
-	Inception(img image.Image) (*tensor.Predictions, error)
+	Inception(img image.Image) (*classifiers.Predictions, error)
 }
 
 type Cache interface {
-	Inception(file, network string, inception func() ([]tensor.Prediction, error)) ([]tensor.Prediction, error)
+	Inception(file, network string, inception func() ([]classifiers.Prediction, error)) ([]classifiers.Prediction, error)
 }
 
 func main() {
@@ -44,12 +44,12 @@ func main() {
 
 	var classifier Classifier
 	if !onlyFromCache {
-		pnasnet := &tensor.Model{
+		pnasnet := &classifiers.Model{
 			ModelName:       modelRootFolder + "/pnasnet",
 			TagName:         "myTag",
 			InputLayer:      "module/hub_input/images",
 			OutputLayer:     "module/final_layer/predictions",
-			ImageMode:       tensor.ImageModeTensorflowPositive,
+			ImageMode:       classifiers.ImageModeTensorflowPositive,
 			Labels:          "imagenet_class_index.json",
 			ImageHeight:     331,
 			ImageWidth:      331,
@@ -114,9 +114,9 @@ func inspectFolder(cache Cache, classifier Classifier, folder string) (map[strin
 			continue
 		}
 
-		var inception func() ([]tensor.Prediction, error)
+		var inception func() ([]classifiers.Prediction, error)
 		if classifier != nil {
-			inception = func() ([]tensor.Prediction, error) {
+			inception = func() ([]classifiers.Prediction, error) {
 				predictions, err := classifier.Inception(img)
 				if err != nil {
 					return nil, errors.Wrapf(err, "error executing inception on %s", file)
@@ -125,12 +125,12 @@ func inspectFolder(cache Cache, classifier Classifier, folder string) (map[strin
 				return predictions.Best(10), nil
 			}
 		} else {
-			inception = func() ([]tensor.Prediction, error) {
+			inception = func() ([]classifiers.Prediction, error) {
 				return nil, errors.New("no classifier given")
 			}
 		}
 
-		var preds []tensor.Prediction
+		var preds []classifiers.Prediction
 		if cache != nil {
 			preds, err = cache.Inception(file, "pnasnet", inception)
 			if err != nil {

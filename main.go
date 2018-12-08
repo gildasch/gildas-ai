@@ -13,7 +13,7 @@ import (
 	"github.com/gildasch/gildas-ai/faces/detection"
 	"github.com/gildasch/gildas-ai/faces/landmarks"
 	"github.com/gildasch/gildas-ai/imageutils"
-	"github.com/gildasch/gildas-ai/tensor"
+	"github.com/gildasch/gildas-ai/objects/classifiers"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,43 +23,43 @@ func usage() {
 }
 
 func main() {
-	models := map[string]*tensor.Model{
-		"xception": &tensor.Model{
-			ModelName:   "myModel",
+	models := map[string]*classifiers.Model{
+		"xception": &classifiers.Model{
+			ModelName:   "objects/classifiers/myModel",
 			TagName:     "myTag",
 			InputLayer:  "input_1",
 			OutputLayer: "predictions/Softmax",
-			ImageMode:   tensor.ImageModeTensorflow,
+			ImageMode:   classifiers.ImageModeTensorflow,
 			Labels:      "imagenet_class_index.json",
 			ImageHeight: 299,
 			ImageWidth:  299,
 		},
-		"resnet": &tensor.Model{
-			ModelName:   "resnet",
+		"resnet": &classifiers.Model{
+			ModelName:   "objects/classifiers/resnet",
 			TagName:     "myTag",
 			InputLayer:  "input_1",
 			OutputLayer: "fc1000/Softmax",
-			ImageMode:   tensor.ImageModeCaffe,
+			ImageMode:   classifiers.ImageModeCaffe,
 			Labels:      "imagenet_class_index.json",
 			ImageHeight: 224,
 			ImageWidth:  224,
 		},
-		"nasnet": &tensor.Model{
-			ModelName:   "nasnet-mobile",
+		"nasnet": &classifiers.Model{
+			ModelName:   "objects/classifiers/nasnet-mobile",
 			TagName:     "myTag",
 			InputLayer:  "input_1",
 			OutputLayer: "predictions/Softmax",
-			ImageMode:   tensor.ImageModeTensorflow,
+			ImageMode:   classifiers.ImageModeTensorflow,
 			Labels:      "imagenet_class_index.json",
 			ImageHeight: 224,
 			ImageWidth:  224,
 		},
-		"pnasnet": &tensor.Model{
-			ModelName:       "pnasnet",
+		"pnasnet": &classifiers.Model{
+			ModelName:       "objects/classifiers/pnasnet",
 			TagName:         "myTag",
 			InputLayer:      "module/hub_input/images",
 			OutputLayer:     "module/final_layer/predictions",
-			ImageMode:       tensor.ImageModeTensorflowPositive,
+			ImageMode:       classifiers.ImageModeTensorflowPositive,
 			Labels:          "imagenet_class_index.json",
 			ImageHeight:     331,
 			ImageWidth:      331,
