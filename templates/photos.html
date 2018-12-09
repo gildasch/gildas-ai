@@ -19,7 +19,7 @@
 
     <ul class='items'>
       {{ range $item := .items }}
-      <li><img src="/photos/{{ $item.Filename }}" /></li>
+      <li><img src="/photos/{{ $item.Filename }}" title="{{ $item.Predictions }}" /></li>
       {{ end }}
     </ul>
   </body>

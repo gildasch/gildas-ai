@@ -2,6 +2,8 @@ package sqlite
 
 import (
 	"database/sql"
+	"strconv"
+	"strings"
 
 	"github.com/gildasch/gildas-ai/objects"
 	"github.com/gildasch/gildas-ai/objects/listing"
@@ -43,30 +45,34 @@ func (c *Store) Get(query, after string, n int) ([]listing.Item, error) {
 
 	if query != "" && after != "" {
 		rows, err = c.Query(`
-select filename, label, score
+select filename, group_concat(label || ':' || score, ';')
 from predictions
 where label = $1 and filename > $2
-order by filename desc
+group by filename
+order by filename desc, score desc
 limit $3`, query, after, n)
 	} else if query != "" {
 		rows, err = c.Query(`
-select filename, label, score
+select filename, group_concat(label || ':' || score, ';')
 from predictions
 where label = $1
-order by filename desc
+group by filename
+order by filename desc, score desc
 limit $3`, query, n)
 	} else if after != "" {
 		rows, err = c.Query(`
-select filename, label, score
+select distinct filename, group_concat(label || ':' || score, ';')
 from predictions
 where filename > $2
-order by filename desc
+group by filename
+order by filename desc, score desc
 limit $3`, after, n)
 	} else {
 		rows, err = c.Query(`
-select filename, label, score
+select distinct filename, group_concat(label || ':' || score, ';')
 from predictions
-order by filename desc
+group by filename
+order by filename desc, score desc
 limit $3`, n)
 	}
 	if err != nil {
@@ -74,24 +80,43 @@ limit $3`, n)
 	}
 	defer rows.Close()
 
-	preds := map[string][]objects.Prediction{}
+	var items []listing.Item
 	for rows.Next() {
-		var filename string
-		var p objects.Prediction
-		err := rows.Scan(&filename, &p.Label, &p.Score)
+		var filename, labelList string
+		err := rows.Scan(&filename, &labelList)
 		if err != nil {
 			return nil, errors.Wrapf(err, "error scanning sqlite store")
 		}
 
-		preds[filename] = append(preds[filename], p)
-	}
-
-	var items []listing.Item
-	for filename, pp := range preds {
 		items = append(items, listing.Item{
 			Filename:    filename,
-			Predictions: pp})
+			Predictions: extractPredictions(labelList)})
 	}
 
 	return items, nil
+}
+
+func extractPredictions(labelList string) []objects.Prediction {
+	splitted := strings.Split(labelList, ";")
+
+	var predictions []objects.Prediction
+	for _, p := range splitted {
+		labelAndScore := strings.Split(p, ":")
+		if len(labelAndScore) != 2 {
+			continue
+		}
+
+		label := labelAndScore[0]
+		score, err := strconv.ParseFloat(labelAndScore[1], 32)
+		if err != nil {
+			continue
+		}
+
+		predictions = append(predictions, objects.Prediction{
+			Label: label,
+			Score: float32(score),
+		})
+	}
+
+	return predictions
 }
