@@ -47,18 +47,18 @@ func (c *Store) Get(query, after string, n int) ([]listing.Item, error) {
 		rows, err = c.Query(`
 select filename, group_concat(label || ':' || score, ';')
 from predictions
-where label = $1 and filename > $2
+where label like $1 and filename > $2
 group by filename
 order by filename desc, score desc
-limit $3`, query, after, n)
+limit $3`, "%"+query+"%", after, n)
 	} else if query != "" {
 		rows, err = c.Query(`
 select filename, group_concat(label || ':' || score, ';')
 from predictions
-where label = $1
+where label like $1
 group by filename
 order by filename desc, score desc
-limit $3`, query, n)
+limit $3`, "%"+query+"%", n)
 	} else if after != "" {
 		rows, err = c.Query(`
 select distinct filename, group_concat(label || ':' || score, ';')
