@@ -76,3 +76,37 @@ func (e *Extractor) Extract(img image.Image) ([]image.Image, []descriptors.Descr
 
 	return images, descrs, nil
 }
+
+func (e *Extractor) ExtractLandmarks(img image.Image) ([][]image.Point, []image.Image, error) {
+	allDetections, err := e.Detector.Detect(img)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "error detecting faces")
+	}
+
+	detections := allDetections.Above(0.4)
+
+	if detections.NumDetections == 0 {
+		return nil, nil, errors.New("no face detected")
+	}
+
+	var ret [][]image.Point
+	var crops []image.Image
+	for _, box := range detections.Boxes {
+		if box.Dx() < 45 || box.Dy() < 45 {
+			continue // face is too small
+		}
+
+		cropped := image.NewRGBA(box)
+		draw.Draw(cropped, box, img, box.Min, draw.Src)
+
+		landmarks, err := e.Landmark.Detect(cropped)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "error detecting landmarks")
+		}
+
+		ret = append(ret, landmarks.PointsOnImage(cropped))
+		crops = append(crops, cropped)
+	}
+
+	return ret, crops, nil
+}
