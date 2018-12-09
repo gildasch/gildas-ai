@@ -1,0 +1,26 @@
+<html>
+  <head>
+    <style>
+      .items li {
+          list-style-type: none;
+      }
+      .items li img {
+          float:left;
+          width:30%;
+      }
+    </style>
+  </head>
+  <body>
+    <form action="/photos" method="get" style="text-align:center;">
+      <input type="text" name="query" value="{{ .query }}" />
+      <input type="text" name="after" value="{{ .after }}" />
+      <input type="submit" />
+    </form>
+
+    <ul class='items'>
+      {{ range $item := .items }}
+      <li><img src="/photos/{{ $item.Filename }}" /></li>
+      {{ end }}
+    </ul>
+  </body>
+</html>

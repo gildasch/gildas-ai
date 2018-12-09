@@ -14,6 +14,7 @@ import (
 	"github.com/gildasch/gildas-ai/faces/landmarks"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/gildasch/gildas-ai/objects/classifiers"
+	"github.com/gildasch/gildas-ai/objects/listing/stores/sqlite"
 	"github.com/gin-gonic/gin"
 )
 
@@ -95,9 +96,17 @@ func main() {
 			classifiers[name] = m
 		}
 
+		sqliteStore, err := sqlite.NewStore("/home/gildas/Pictures/lgg5/lgg5/.inception.sqlite")
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		app := gin.Default()
 		app.Static("/static", "./static")
-		app.LoadHTMLFiles("templates/predictions.html", "templates/faces.html")
+		app.LoadHTMLFiles(
+			"templates/predictions.html",
+			"templates/faces.html",
+			"templates/photos.html")
 		app.GET("/object/api", api.ClassifyHandler(classifiers, false))
 		app.GET("/object", api.ClassifyHandler(classifiers, true))
 
@@ -110,6 +119,9 @@ func main() {
 		app.GET("/faces/batch/:batchID", api.FacesGetBatchHandler(batches))
 		app.GET("/faces/batch/:batchID/sources/:name", api.FaceSourceHandler(batches))
 		app.GET("/faces/batch/:batchID/cropped/:name", api.FaceCroppedHandler(batches))
+
+		app.GET("/photos", api.PhotosHandler(sqliteStore))
+		app.GET("/photos/*filename", api.GetPhotoHandler)
 
 		app.Run()
 	}
