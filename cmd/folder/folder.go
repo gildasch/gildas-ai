@@ -11,6 +11,7 @@ import (
 
 	"github.com/gildasch/gildas-ai/cmd/folder/cache/sqlite"
 	"github.com/gildasch/gildas-ai/imageutils"
+	"github.com/gildasch/gildas-ai/objects"
 	"github.com/gildasch/gildas-ai/objects/classifiers"
 	"github.com/pkg/errors"
 )
@@ -26,11 +27,11 @@ func usage() {
 }
 
 type Classifier interface {
-	Inception(img image.Image) (*classifiers.Predictions, error)
+	Inception(img image.Image) (*objects.Predictions, error)
 }
 
 type Cache interface {
-	Inception(file, network string, inception func() ([]classifiers.Prediction, error)) ([]classifiers.Prediction, error)
+	Inception(file, network string, inception func() ([]objects.Prediction, error)) ([]objects.Prediction, error)
 }
 
 func main() {
@@ -104,7 +105,7 @@ func inspectFolder(cache Cache, classifier Classifier, folder string) (map[strin
 		return nil, err
 	}
 
-	objects := map[string][]string{}
+	allPreds := map[string][]string{}
 	for i, file := range files {
 		fmt.Printf("(%d/%d) processing %s\n", i+1, len(files), file)
 
@@ -114,9 +115,9 @@ func inspectFolder(cache Cache, classifier Classifier, folder string) (map[strin
 			continue
 		}
 
-		var inception func() ([]classifiers.Prediction, error)
+		var inception func() ([]objects.Prediction, error)
 		if classifier != nil {
-			inception = func() ([]classifiers.Prediction, error) {
+			inception = func() ([]objects.Prediction, error) {
 				predictions, err := classifier.Inception(img)
 				if err != nil {
 					return nil, errors.Wrapf(err, "error executing inception on %s", file)
@@ -125,12 +126,12 @@ func inspectFolder(cache Cache, classifier Classifier, folder string) (map[strin
 				return predictions.Best(10), nil
 			}
 		} else {
-			inception = func() ([]classifiers.Prediction, error) {
+			inception = func() ([]objects.Prediction, error) {
 				return nil, errors.New("no classifier given")
 			}
 		}
 
-		var preds []classifiers.Prediction
+		var preds []objects.Prediction
 		if cache != nil {
 			preds, err = cache.Inception(file, "pnasnet", inception)
 			if err != nil {
@@ -146,15 +147,15 @@ func inspectFolder(cache Cache, classifier Classifier, folder string) (map[strin
 		}
 
 		for _, p := range preds {
-			objects[p.Label] = append(objects[p.Label], file)
+			allPreds[p.Label] = append(allPreds[p.Label], file)
 		}
 	}
 	fmt.Println()
 
-	return objects, nil
+	return allPreds, nil
 }
 
-func find(objects map[string][]string, query string) []string {
+func find(allPreds map[string][]string, query string) []string {
 	query = strings.ToLower(strings.TrimSuffix(query, "\n"))
-	return objects[query]
+	return allPreds[query]
 }

@@ -2,9 +2,9 @@ package classifiers
 
 import (
 	"image"
-	"sort"
 
 	"github.com/gildasch/gildas-ai/imageutils"
+	"github.com/gildasch/gildas-ai/objects"
 	"github.com/gildasch/gildas-ai/objects/labels"
 	"github.com/pkg/errors"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
@@ -42,51 +42,7 @@ func (m *Model) Load() (func() error, error) {
 	return model.Session.Close, nil
 }
 
-type Predictions struct {
-	scores []float32
-	labels labels.Labels
-}
-
-type Prediction struct {
-	Label string  `json:"label"`
-	Score float32 `json:"score"`
-}
-
-func (p *Predictions) Best(n int) []Prediction {
-	var ret []Prediction
-
-	for i, score := range p.scores {
-		ret = append(ret, Prediction{
-			Label: p.labels.Get(i),
-			Score: score,
-		})
-	}
-
-	sort.Slice(ret, func(i, j int) bool {
-		return ret[i].Score > ret[j].Score
-	})
-
-	return ret[:n]
-}
-
-func (p *Predictions) Above(threshold float32) []Prediction {
-	var ret []Prediction
-
-	for i, score := range p.scores {
-		if score < threshold {
-			continue
-		}
-
-		ret = append(ret, Prediction{
-			Label: p.labels.Get(i),
-			Score: score,
-		})
-	}
-
-	return ret
-}
-
-func (m *Model) Inception(img image.Image) (*Predictions, error) {
+func (m *Model) Inception(img image.Image) (*objects.Predictions, error) {
 	img = imageutils.Scaled(img, m.ImageHeight, m.ImageWidth)
 
 	tensor, err := imageToTensor(img, m.ImageMode, m.ImageHeight, m.ImageWidth)
@@ -120,9 +76,9 @@ func (m *Model) Inception(img image.Image) (*Predictions, error) {
 		return nil, errors.New("predictions are empty")
 	}
 
-	return &Predictions{
-		scores: res[0],
-		labels: m.labels}, nil
+	return &objects.Predictions{
+		Scores: res[0],
+		Labels: m.labels}, nil
 }
 
 const (
