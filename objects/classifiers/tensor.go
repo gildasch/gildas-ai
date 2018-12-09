@@ -5,13 +5,14 @@ import (
 	"sort"
 
 	"github.com/gildasch/gildas-ai/imageutils"
+	"github.com/gildasch/gildas-ai/objects/labels"
 	"github.com/pkg/errors"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 )
 
 type Model struct {
 	model  *tf.SavedModel
-	labels Labels
+	labels labels.Labels
 
 	ModelName, TagName      string
 	InputLayer, OutputLayer string
@@ -23,7 +24,7 @@ type Model struct {
 
 func (m *Model) Load() (func() error, error) {
 	if m.Labels != "" {
-		l, err := labelsFromFile(m.Labels, m.IndexCorrection)
+		l, err := labels.FromFile(m.Labels, m.IndexCorrection)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to read labels from file %q", m.Labels)
 		}
@@ -43,7 +44,7 @@ func (m *Model) Load() (func() error, error) {
 
 type Predictions struct {
 	scores []float32
-	labels Labels
+	labels labels.Labels
 }
 
 type Prediction struct {
