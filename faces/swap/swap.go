@@ -125,13 +125,17 @@ func maskFromPolygon(in image.Image, landmarks []image.Point) image.Image {
 // 26 to 22 is left eye brow
 // 21 to 17 is right eye brow
 func simplify(landmarks []image.Point) []image.Point {
-	chin := landmarks[:17]
+	var out []image.Point
 
-	for i := 26; i >= 17; i-- {
-		chin = append(chin, landmarks[i])
+	for i := 0; i < 17; i++ {
+		out = append(out, landmarks[i])
 	}
 
-	return chin
+	for i := 26; i >= 17; i-- {
+		out = append(out, moveUp(landmarks[8], landmarks[i]))
+	}
+
+	return out
 }
 
 const factor = 0.1
