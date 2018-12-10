@@ -101,6 +101,7 @@ func swap(detector LandmarkDetector, src, dest image.Image) (image.Image, error)
 	draw.Draw(distortedAligned, out.Bounds(), distorted, image.ZP, draw.Src)
 
 	blend(distortedAligned, out)
+	feather(distortedAligned, maskAligned, out, srcLandmarks[33])
 
 	fmt.Println("out bounds", out.Bounds())
 	fmt.Println("dest bounds", dest.Bounds())
@@ -270,22 +271,39 @@ func blend(on, to *image.RGBA) {
 			on.Set(x, y, colorful.Hsl(h, s, l))
 		}
 	}
+}
 
-	// for x := on.Bounds().Min.X; x < on.Bounds().Max.X; x++ {
-	// 	for y := on.Bounds().Min.Y; y < on.Bounds().Max.Y; y++ {
-	// 		toColor, visible := colorful.MakeColor(to.At(x, y))
-	// 		if !visible {
-	// 			continue
-	// 		}
-	// 		distColor, visible := colorful.MakeColor(on.At(x, y))
-	// 		if !visible {
-	// 			continue
-	// 		}
+func feather(on, mask, to *image.RGBA, center image.Point) {
+	center.X += on.Bounds().Min.X
+	center.Y += on.Bounds().Min.Y
 
-	// 		h, s, _ := toColor.Hsl()
-	// 		_, _, l := distColor.Hsl()
-	// 		on.Set(x, y, colorful.Hsl(h, s, l))
-	// 	}
-	// }
-	fmt.Println("end blend")
+	maxDist := 0.0
+	for x := on.Bounds().Min.X; x < on.Bounds().Max.X; x++ {
+		for y := on.Bounds().Min.Y; y < on.Bounds().Max.Y; y++ {
+			if _, _, _, a := mask.At(x, y).RGBA(); a == 65535 {
+				continue
+			}
+
+			distToCenter := float64((center.X-x)*(center.X-x) + (center.Y-y)*(center.Y-y))
+			if distToCenter > maxDist {
+				maxDist = distToCenter
+			}
+		}
+	}
+
+	for x := on.Bounds().Min.X; x < on.Bounds().Max.X; x++ {
+		for y := on.Bounds().Min.Y; y < on.Bounds().Max.Y; y++ {
+			onColor, visible := colorful.MakeColor(on.At(x, y))
+			if !visible {
+				continue
+			}
+			toColor, visible := colorful.MakeColor(to.At(x, y))
+			if !visible {
+				continue
+			}
+
+			distToCenter := float64((center.X-x)*(center.X-x) + (center.Y-y)*(center.Y-y))
+			on.Set(x, y, onColor.BlendLab(toColor, 1.5*distToCenter/maxDist))
+		}
+	}
 }
