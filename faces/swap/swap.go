@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+	"sort"
 
 	"github.com/fogleman/gg"
 	"github.com/gildasch/gildas-ai/faces/landmarks"
@@ -98,29 +99,14 @@ func swap(detector LandmarkDetector, src, dest image.Image) (image.Image, error)
 
 	distortedAligned := image.NewRGBA(out.Bounds())
 	draw.Draw(distortedAligned, out.Bounds(), distorted, image.ZP, draw.Src)
-	for x := distortedAligned.Bounds().Min.X; x < distortedAligned.Bounds().Max.X; x++ {
-		for y := distortedAligned.Bounds().Min.Y; y < distortedAligned.Bounds().Max.Y; y++ {
-			outColor, visible := colorful.MakeColor(out.At(x, y))
-			if !visible {
-				continue
-			}
-			distColor, visible := colorful.MakeColor(distortedAligned.At(x, y))
-			if !visible {
-				continue
-			}
 
-			h, s, _ := outColor.Hsl()
-			_, _, l := distColor.Hsl()
-			distortedAligned.Set(x, y, colorful.Hsl(h, s, l))
-			// distortedAligned.Set(x, y, distColor.BlendHcl(outColor, 0.5))
-		}
-	}
+	blend(distortedAligned, out)
 
 	fmt.Println("out bounds", out.Bounds())
 	fmt.Println("dest bounds", dest.Bounds())
 	fmt.Println("mask bounds", maskAligned.Bounds())
 	fmt.Println("distorted bounds", distortedAligned.Bounds())
-	draw.DrawMask(out, out.Bounds(), distortedAligned, image.ZP, maskAligned, out.Bounds().Min, draw.Over)
+	draw.DrawMask(out, out.Bounds(), distortedAligned, out.Bounds().Min, maskAligned, out.Bounds().Min, draw.Over)
 
 	gg.SavePNG(fmt.Sprintf("out-swap-truc-%d.png", counter), out)
 	counter++
@@ -165,4 +151,141 @@ func moveUp(base, target image.Point) image.Point {
 	target.X += int(factor * float32(target.X-base.X))
 	target.Y += int(factor * float32(target.Y-base.Y))
 	return target
+}
+
+type values struct {
+	v []float64
+
+	minV      float64
+	minSet    bool
+	maxV      float64
+	maxSet    bool
+	avgV      float64
+	avgSet    bool
+	medianV   float64
+	medianSet bool
+}
+
+func (v *values) min() float64 {
+	if v.minSet {
+		return v.minV
+	}
+	min := 100000.0
+	for _, vv := range v.v {
+		if vv < min {
+			min = vv
+		}
+	}
+	v.minSet = true
+	v.minV = min
+	return min
+}
+
+func (v *values) max() float64 {
+	if v.maxSet {
+		return v.maxV
+	}
+	max := 0.0
+	for _, vv := range v.v {
+		if vv > max {
+			max = vv
+		}
+	}
+	v.maxSet = true
+	v.maxV = max
+	return max
+}
+
+func (v *values) avg() float64 {
+	if v.avgSet {
+		return v.avgV
+	}
+	sum := 0.0
+	for _, vv := range v.v {
+		sum += vv
+	}
+	avg := sum / float64(len(v.v))
+	v.avgSet = true
+	v.avgV = avg
+	return avg
+}
+
+func (v *values) median() float64 {
+	if v.medianSet {
+		return v.medianV
+	}
+
+	sort.Slice(v.v, func(i, j int) bool { return v.v[i] < v.v[j] })
+
+	median := v.v[len(v.v)/2]
+	v.medianSet = true
+	v.medianV = median
+	return median
+}
+
+func blend(on, to *image.RGBA) {
+	var onH, onS, onL, toH, toS, toL values
+	for x := to.Bounds().Min.X; x < to.Bounds().Max.X; x++ {
+		for y := to.Bounds().Min.Y; y < to.Bounds().Max.Y; y++ {
+			onColor, visible := colorful.MakeColor(on.At(x, y))
+			if !visible {
+				continue
+			}
+			toColor, visible := colorful.MakeColor(to.At(x, y))
+			if !visible {
+				continue
+			}
+
+			h, s, l := onColor.Hsl()
+			onH.v = append(onH.v, h)
+			onS.v = append(onS.v, s)
+			onL.v = append(onL.v, l)
+
+			h, s, l = toColor.Hsl()
+			toH.v = append(toH.v, h)
+			toS.v = append(toS.v, s)
+			toL.v = append(toL.v, l)
+		}
+	}
+
+	for x := on.Bounds().Min.X; x < on.Bounds().Max.X; x++ {
+		for y := on.Bounds().Min.Y; y < on.Bounds().Max.Y; y++ {
+			onColor, visible := colorful.MakeColor(on.At(x, y))
+			if !visible {
+				continue
+			}
+
+			h, s, l := onColor.Hsl()
+			if h < onH.median() {
+				h = (h-onH.min())*(toH.median()-toH.min())/(onH.median()-onH.min()) + toH.min()
+			} else {
+				h = (h-onH.median())*(toH.max()-toH.median())/(onH.max()-onH.median()) + toH.median()
+			}
+			s = toS.median()
+			if l < onL.median() {
+				l = (l-onL.min())*(toL.median()-toL.min())/(onL.median()-onL.min()) + toL.min()
+			} else {
+				l = (l-onL.median())*(toL.max()-toL.median())/(onL.max()-onL.median()) + toL.median()
+			}
+			on.Set(x, y, colorful.Hsl(h, s, l))
+		}
+	}
+
+	// for x := on.Bounds().Min.X; x < on.Bounds().Max.X; x++ {
+	// 	for y := on.Bounds().Min.Y; y < on.Bounds().Max.Y; y++ {
+	// 		toColor, visible := colorful.MakeColor(to.At(x, y))
+	// 		if !visible {
+	// 			continue
+	// 		}
+	// 		distColor, visible := colorful.MakeColor(on.At(x, y))
+	// 		if !visible {
+	// 			continue
+	// 		}
+
+	// 		h, s, _ := toColor.Hsl()
+	// 		_, _, l := distColor.Hsl()
+	// 		on.Set(x, y, colorful.Hsl(h, s, l))
+	// 	}
+	// }
+	fmt.Println("end blend")
 }
