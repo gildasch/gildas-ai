@@ -8,6 +8,7 @@ import (
 	"github.com/fogleman/gg"
 	"github.com/gildasch/gildas-ai/faces/landmarks"
 	"github.com/gildasch/gildas-ai/imageutils/distort"
+	colorful "github.com/lucasb-eyer/go-colorful"
 	"github.com/nfnt/resize"
 	"github.com/pkg/errors"
 )
@@ -95,11 +96,31 @@ func swap(detector LandmarkDetector, src, dest image.Image) (image.Image, error)
 
 	gg.SavePNG(fmt.Sprintf("out-swap-mask-%d.png", counter), distorted)
 
+	distortedAligned := image.NewRGBA(out.Bounds())
+	draw.Draw(distortedAligned, out.Bounds(), distorted, image.ZP, draw.Src)
+	for x := distortedAligned.Bounds().Min.X; x < distortedAligned.Bounds().Max.X; x++ {
+		for y := distortedAligned.Bounds().Min.Y; y < distortedAligned.Bounds().Max.Y; y++ {
+			outColor, visible := colorful.MakeColor(out.At(x, y))
+			if !visible {
+				continue
+			}
+			distColor, visible := colorful.MakeColor(distortedAligned.At(x, y))
+			if !visible {
+				continue
+			}
+
+			h, s, _ := outColor.Hsl()
+			_, _, l := distColor.Hsl()
+			distortedAligned.Set(x, y, colorful.Hsl(h, s, l))
+			// distortedAligned.Set(x, y, distColor.BlendHcl(outColor, 0.5))
+		}
+	}
+
 	fmt.Println("out bounds", out.Bounds())
 	fmt.Println("dest bounds", dest.Bounds())
 	fmt.Println("mask bounds", maskAligned.Bounds())
-	fmt.Println("distorted bounds", distorted.Bounds())
-	draw.DrawMask(out, out.Bounds(), distorted, image.ZP, maskAligned, out.Bounds().Min, draw.Over)
+	fmt.Println("distorted bounds", distortedAligned.Bounds())
+	draw.DrawMask(out, out.Bounds(), distortedAligned, image.ZP, maskAligned, out.Bounds().Min, draw.Over)
 
 	gg.SavePNG(fmt.Sprintf("out-swap-truc-%d.png", counter), out)
 	counter++
