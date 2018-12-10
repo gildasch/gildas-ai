@@ -96,7 +96,7 @@ func main() {
 			classifiers[name] = m
 		}
 
-		sqliteStore, err := sqlite.NewStore("/home/gildas/Pictures/lgg5/lgg5/.inception.sqlite")
+		sqliteStore, err := sqlite.NewStore(".inception.sqlite")
 		if err != nil {
 			log.Fatal(err)
 		}
