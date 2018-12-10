@@ -16,7 +16,8 @@ RUN go get github.com/gin-gonic/gin && \
     go get github.com/disintegration/imaging && \
     go get github.com/mattn/go-sqlite3 && \
     go get gopkg.in/gographics/imagick.v3/imagick && \
-    go get github.com/fogleman/gg
+    go get github.com/fogleman/gg && \
+    go get github.com/lucasb-eyer/go-colorful
 
 COPY . /go/src/github.com/gildasch/gildas-ai
 
