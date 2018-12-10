@@ -3,8 +3,8 @@
   </head>
   <body>
     <form action="/faceswap" style="text-align:center;">
-      <input type="text" name="src" style="width:50%;min-width:500px;" /><br />
-      <input type="text" name="dst" style="width:50%;min-width:500px;" /><br />
+      <input type="text" name="src" style="width:50%;min-width:500px;" value="{{ .src }}" /><br />
+      <input type="text" name="dst" style="width:50%;min-width:500px;" value="{{ .dst }}" /><br />
       <input type="submit" />
     </form>
 
