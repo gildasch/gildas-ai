@@ -2,9 +2,7 @@ package api
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
-	"image"
 	"image/jpeg"
 	"net/http"
 	"sort"
@@ -140,14 +138,6 @@ func (f *faceCluster) Len() int {
 
 func (f *faceCluster) Distance(i, j int) float32 {
 	return 1000 * f.distances[i][j]
-}
-
-func toHTMLBase64(img image.Image) string {
-	var buf bytes.Buffer
-	_ = jpeg.Encode(&buf, img, nil)
-
-	b64 := base64.StdEncoding.EncodeToString(buf.Bytes())
-	return "data:image/jpeg;base64," + b64
 }
 
 func FaceSourceHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
