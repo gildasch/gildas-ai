@@ -4,7 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"image"
-	_ "image/gif"
+	"image/gif"
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
@@ -45,6 +45,22 @@ func FromURL(url string) (image.Image, error) {
 	}
 
 	return img, nil
+
+}
+
+func GIFFromURL(url string) (*gif.GIF, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get %q", url)
+	}
+	defer resp.Body.Close()
+
+	g, err := gif.DecodeAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode image")
+	}
+
+	return g, nil
 
 }
 

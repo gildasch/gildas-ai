@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"html/template"
 	"image"
+	"image/draw"
+	"image/gif"
 	"image/jpeg"
 	"net/http"
 	"strings"
@@ -35,6 +37,45 @@ func FaceSwapHandler(extractor swap.Extractor, detector swap.LandmarkDetector) g
 				fmt.Sprintf("cannot read remote image %q: %v\n", srcURL, err))
 			return
 		}
+
+		if strings.HasSuffix(strings.ToLower(dstURL), ".gif") {
+			dstGIF, err := imageutils.GIFFromURL(dstURL)
+			if err != nil {
+				c.AbortWithStatusJSON(
+					http.StatusBadRequest,
+					fmt.Sprintf("cannot read remote image %q: %v\n", dstURL, err))
+				return
+			}
+
+			if len(dstGIF.Image) == 0 {
+				c.AbortWithStatusJSON(
+					http.StatusBadRequest,
+					fmt.Sprintf("gif %q has zero frame\n", dstURL))
+				return
+			}
+
+			dst := image.NewRGBA(dstGIF.Image[0].Bounds())
+			for i := 0; i < len(dstGIF.Image); i++ {
+				draw.Draw(dst, dst.Bounds(), dstGIF.Image[i], dstGIF.Image[i].Bounds().Min, draw.Over)
+
+				out, err := swap.FaceSwap(extractor, detector, dst, src)
+				if err != nil {
+					continue
+				}
+
+				outPaletted := image.NewPaletted(out.Bounds(), dstGIF.Image[i].Palette)
+				draw.Draw(outPaletted, outPaletted.Rect, out, out.Bounds().Min, draw.Over)
+
+				dstGIF.Image[i] = outPaletted
+			}
+
+			c.HTML(http.StatusOK, "faceswap.html", gin.H{
+				"src": srcURL,
+				"dst": dstURL,
+				"out": template.URL(toHTMLBase64GIF(dstGIF)),
+			})
+		}
+
 		dst, err := imageutils.FromURL(dstURL)
 		if err != nil {
 			c.AbortWithStatusJSON(
@@ -65,4 +106,12 @@ func toHTMLBase64(img image.Image) string {
 
 	b64 := base64.StdEncoding.EncodeToString(buf.Bytes())
 	return "data:image/jpeg;base64," + b64
+}
+
+func toHTMLBase64GIF(g *gif.GIF) string {
+	var buf bytes.Buffer
+	_ = gif.EncodeAll(&buf, g)
+
+	b64 := base64.StdEncoding.EncodeToString(buf.Bytes())
+	return "data:image/gif;base64," + b64
 }
