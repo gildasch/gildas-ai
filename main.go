@@ -127,7 +127,7 @@ func main() {
 		app.GET("/faces/batch/:batchID/cropped/:name", api.FaceCroppedHandler(batches))
 
 		app.GET("/photos", api.PhotosHandler(sqliteStore))
-		app.GET("/photos/*filename", api.GetPhotoHandler)
+		app.GET("/photos/*filename", api.GetPhotoHandler(sqliteStore))
 
 		store := persistence.NewInMemoryStore(365 * 24 * time.Hour)
 		app.GET("/faceswap", cache.CachePage(store, 12*time.Hour, api.FaceSwapHandler(extractor, landmark)))

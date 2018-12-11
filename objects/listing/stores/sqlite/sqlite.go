@@ -96,6 +96,20 @@ limit $3`, n)
 	return items, nil
 }
 
+func (c *Store) Contains(filename string) (bool, error) {
+	rows, err := c.Query(`
+select filename
+from predictions
+where filename = $1
+limit 1`, filename)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+
+	return rows.Next(), nil
+}
+
 func extractPredictions(labelList string) []objects.Prediction {
 	splitted := strings.Split(labelList, ";")
 

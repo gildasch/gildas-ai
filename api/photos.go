@@ -9,6 +9,7 @@ import (
 )
 
 type Store interface {
+	Contains(filename string) (bool, error)
 	Get(query, after string, n int) ([]listing.Item, error)
 }
 
@@ -34,6 +35,21 @@ func PhotosHandler(store Store) gin.HandlerFunc {
 	}
 }
 
-func GetPhotoHandler(c *gin.Context) {
-	c.File(c.Param("filename"))
+func GetPhotoHandler(store Store) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		filename := c.Param("filename")
+
+		ok, err := store.Contains(filename)
+		if err != nil {
+			fmt.Println(err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+		if !ok {
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
+
+		c.File(filename)
+	}
 }
