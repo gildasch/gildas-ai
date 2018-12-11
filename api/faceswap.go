@@ -10,6 +10,7 @@ import (
 	"image/gif"
 	"image/jpeg"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ func FaceSwapHandler(extractor swap.Extractor, detector swap.LandmarkDetector) g
 	return func(c *gin.Context) {
 		srcURL := strings.TrimPrefix(c.Query("src"), "/")
 		dstURL := strings.TrimPrefix(c.Query("dst"), "/")
+		blur, _ := strconv.ParseFloat(c.Query("blur"), 64)
 
 		if srcURL == "" || dstURL == "" {
 			c.HTML(http.StatusOK, "faceswap.html", gin.H{
@@ -40,7 +42,7 @@ func FaceSwapHandler(extractor swap.Extractor, detector swap.LandmarkDetector) g
 			return
 		}
 
-		if strings.HasSuffix(strings.ToLower(dstURL), ".gif") {
+		if strings.Contains(strings.ToLower(dstURL), ".gif") {
 			dstGIF, err := imageutils.GIFFromURL(dstURL)
 			if err != nil {
 				c.AbortWithStatusJSON(
@@ -61,7 +63,10 @@ func FaceSwapHandler(extractor swap.Extractor, detector swap.LandmarkDetector) g
 			for i := 0; i < len(dstGIF.Image); i++ {
 				draw.Draw(dst, dstGIF.Image[i].Bounds(), dstGIF.Image[i], dstGIF.Image[i].Bounds().Min, draw.Over)
 
-				out, err := swap.FaceSwap(extractor, detector, dst, src)
+				if blur == 0 {
+					blur = 0.7
+				}
+				out, err := swap.FaceSwap(extractor, detector, dst, src, blur)
 				if err != nil {
 					continue
 				}
@@ -88,7 +93,7 @@ func FaceSwapHandler(extractor swap.Extractor, detector swap.LandmarkDetector) g
 			return
 		}
 
-		out, err := swap.FaceSwap(extractor, detector, dst, src)
+		out, err := swap.FaceSwap(extractor, detector, dst, src, blur)
 		if err != nil {
 			c.AbortWithStatusJSON(
 				http.StatusBadRequest,

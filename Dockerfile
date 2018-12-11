@@ -19,7 +19,8 @@ RUN go get github.com/gin-gonic/gin && \
     go get github.com/fogleman/gg && \
     go get github.com/lucasb-eyer/go-colorful && \
     go get github.com/esimov/colorquant && \
-    go get github.com/gin-contrib/cache
+    go get github.com/gin-contrib/cache && \
+    go get github.com/disintegration/imaging
 
 COPY . /go/src/github.com/gildasch/gildas-ai
 

@@ -7,6 +7,7 @@ import (
 	"math"
 	"sort"
 
+	"github.com/disintegration/imaging"
 	"github.com/fogleman/gg"
 	"github.com/gildasch/gildas-ai/faces/landmarks"
 	"github.com/gildasch/gildas-ai/imageutils/distort"
@@ -23,7 +24,7 @@ type LandmarkDetector interface {
 	Detect(img image.Image) (*landmarks.Landmarks, error)
 }
 
-func FaceSwap(extractor Extractor, detector LandmarkDetector, dest, src image.Image) (image.Image, error) {
+func FaceSwap(extractor Extractor, detector LandmarkDetector, dest, src image.Image, blur float64) (image.Image, error) {
 	srcLandmarks, srcCrops, err := extractor.ExtractLandmarks(src)
 	if err != nil {
 		return nil, errors.Wrap(err, "error extracting landmarks from src")
@@ -33,14 +34,17 @@ func FaceSwap(extractor Extractor, detector LandmarkDetector, dest, src image.Im
 		return nil, errors.New("no face detected in src image")
 	}
 
-	destLandmarks, destCrops, err := extractor.ExtractLandmarks(dest)
+	destBlurred := imaging.Blur(dest, blur)
+	destBlurredAligned := image.NewRGBA(dest.Bounds())
+	draw.Draw(destBlurredAligned, dest.Bounds(), destBlurred, image.ZP, draw.Src)
+	destLandmarks, destCrops, err := extractor.ExtractLandmarks(destBlurredAligned)
 	if err != nil {
 		return nil, errors.Wrap(err, "error extracting landmarks from dest")
 	}
 
 	for i := range destLandmarks {
 		fmt.Println("bounds before", destCrops[i].Bounds())
-		destCrops[i], err = swap(detector, srcCrops[0], destCrops[i])
+		destCrops[i], err = swap(detector, srcCrops[0], destCrops[i], blur)
 		if err != nil {
 			return nil, errors.Wrapf(err, "error swapping face %d", i)
 		}
@@ -61,9 +65,13 @@ func FaceSwap(extractor Extractor, detector LandmarkDetector, dest, src image.Im
 
 var counter = 1
 
-func swap(detector LandmarkDetector, src, dest image.Image) (image.Image, error) {
+func swap(detector LandmarkDetector, src, dest image.Image, blur float64) (image.Image, error) {
 	gg.SavePNG(fmt.Sprintf("out-swap-crop-src-%d.png", counter), src)
 	gg.SavePNG(fmt.Sprintf("out-swap-crop-dest-%d.png", counter), dest)
+
+	destBlurred := imaging.Blur(dest, blur)
+	destBlurredAligned := image.NewRGBA(dest.Bounds())
+	draw.Draw(destBlurredAligned, dest.Bounds(), destBlurred, image.ZP, draw.Src)
 
 	src = resize.Resize(uint(dest.Bounds().Dx()), uint(dest.Bounds().Dy()), src, resize.NearestNeighbor)
 
@@ -72,7 +80,7 @@ func swap(detector LandmarkDetector, src, dest image.Image) (image.Image, error)
 		return nil, err
 	}
 	srcLandmarks := srcLM.PointsOnImage(src)
-	destLM, err := detector.Detect(dest)
+	destLM, err := detector.Detect(destBlurredAligned)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +109,7 @@ func swap(detector LandmarkDetector, src, dest image.Image) (image.Image, error)
 	distortedAligned := image.NewRGBA(out.Bounds())
 	draw.Draw(distortedAligned, out.Bounds(), distorted, image.ZP, draw.Src)
 
-	blend(distortedAligned, out)
+	blend(distortedAligned, destBlurredAligned)
 	feather(distortedAligned, maskAligned, out, srcLandmarks[33])
 
 	fmt.Println("out bounds", out.Bounds())
@@ -225,7 +233,8 @@ func (v *values) median() float64 {
 	return median
 }
 
-func blend(on, to *image.RGBA) {
+func blend(on *image.RGBA, to image.Image) {
+	gg.SavePNG("out-blurred.png", to)
 	var onH, onS, onL, toH, toS, toL values
 	for x := to.Bounds().Min.X; x < to.Bounds().Max.X; x++ {
 		for y := to.Bounds().Min.Y; y < to.Bounds().Max.Y; y++ {
