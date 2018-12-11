@@ -11,9 +11,11 @@ import (
 	"image/jpeg"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gildasch/gildas-ai/faces/swap"
 	"github.com/gildasch/gildas-ai/imageutils"
+	"github.com/gildasch/gildas-ai/imageutils/gifutils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -55,25 +57,27 @@ func FaceSwapHandler(extractor swap.Extractor, detector swap.LandmarkDetector) g
 			}
 
 			dst := image.NewRGBA(dstGIF.Image[0].Bounds())
+			var outImages []image.Image
 			for i := 0; i < len(dstGIF.Image); i++ {
-				draw.Draw(dst, dst.Bounds(), dstGIF.Image[i], dstGIF.Image[i].Bounds().Min, draw.Over)
+				draw.Draw(dst, dstGIF.Image[i].Bounds(), dstGIF.Image[i], dstGIF.Image[i].Bounds().Min, draw.Over)
 
 				out, err := swap.FaceSwap(extractor, detector, dst, src)
 				if err != nil {
 					continue
 				}
 
-				outPaletted := image.NewPaletted(out.Bounds(), dstGIF.Image[i].Palette)
-				draw.Draw(outPaletted, outPaletted.Rect, out, out.Bounds().Min, draw.Over)
-
-				dstGIF.Image[i] = outPaletted
+				outImages = append(outImages, out)
 			}
+
+			outGIF, err := gifutils.MakeGIFFromImages(
+				outImages, time.Duration(dstGIF.Delay[0])*10*time.Millisecond, gifutils.StandardQuantizer{})
 
 			c.HTML(http.StatusOK, "faceswap.html", gin.H{
 				"src": srcURL,
 				"dst": dstURL,
-				"out": template.URL(toHTMLBase64GIF(dstGIF)),
+				"out": template.URL(toHTMLBase64GIF(outGIF)),
 			})
+			return
 		}
 
 		dst, err := imageutils.FromURL(dstURL)
