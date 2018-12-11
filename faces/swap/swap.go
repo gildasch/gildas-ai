@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+	"math"
 	"sort"
 
 	"github.com/fogleman/gg"
@@ -303,7 +304,15 @@ func feather(on, mask, to *image.RGBA, center image.Point) {
 			}
 
 			distToCenter := float64((center.X-x)*(center.X-x) + (center.Y-y)*(center.Y-y))
-			on.Set(x, y, onColor.BlendLab(toColor, 1.5*distToCenter/maxDist))
+			if distToCenter > maxDist {
+				continue
+			}
+
+			t := math.Pow(distToCenter/maxDist+0.6, 4)
+			if t > 1 {
+				t = 1
+			}
+			on.Set(x, y, onColor.BlendLab(toColor, t))
 		}
 	}
 }
