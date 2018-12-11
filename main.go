@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gildasch/gildas-ai/api"
 	"github.com/gildasch/gildas-ai/faces"
@@ -15,6 +16,8 @@ import (
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/gildasch/gildas-ai/objects/classifiers"
 	"github.com/gildasch/gildas-ai/objects/listing/stores/sqlite"
+	"github.com/gin-contrib/cache"
+	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 )
 
@@ -126,7 +129,8 @@ func main() {
 		app.GET("/photos", api.PhotosHandler(sqliteStore))
 		app.GET("/photos/*filename", api.GetPhotoHandler)
 
-		app.GET("/faceswap", api.FaceSwapHandler(extractor, landmark))
+		store := persistence.NewInMemoryStore(365 * 24 * time.Hour)
+		app.GET("/faceswap", cache.CachePage(store, 12*time.Hour, api.FaceSwapHandler(extractor, landmark)))
 
 		app.Run()
 	}

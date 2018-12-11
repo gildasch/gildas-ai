@@ -18,7 +18,8 @@ RUN go get github.com/gin-gonic/gin && \
     go get gopkg.in/gographics/imagick.v3/imagick && \
     go get github.com/fogleman/gg && \
     go get github.com/lucasb-eyer/go-colorful && \
-    go get github.com/esimov/colorquant
+    go get github.com/esimov/colorquant && \
+    go get github.com/gin-contrib/cache
 
 COPY . /go/src/github.com/gildasch/gildas-ai
 
