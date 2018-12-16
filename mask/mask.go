@@ -62,7 +62,7 @@ func (r *RCNN) Inception(img image.Image) (*string, error) {
 		return nil, errors.New("result is empty")
 	}
 
-	res, ok := result[0].Value().([][]float32)
+	res, ok := result[0].Value().([][][]float32)
 	if !ok {
 		return nil, errors.Errorf("result has unexpected type %T", result[0].Value())
 	}
@@ -89,15 +89,12 @@ func makeInputs(img image.Image) (imgTensor, meta, anchors *tf.Tensor, err error
 		return nil, nil, nil, err
 	}
 
-	window, err := tf.NewTensor([1][]float32{[]float32{
-		float32(resized.Bounds().Min.Y), float32(resized.Bounds().Min.X),
-		float32(resized.Bounds().Max.Y), float32(resized.Bounds().Max.X),
-	}})
+	anchors, err = getAnchors(resized.Bounds())
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	return imgTensor, meta, window, nil
+	return imgTensor, meta, anchors, nil
 }
 
 func imageToTensor(img image.Image) (*tf.Tensor, error) {
@@ -141,19 +138,22 @@ func composeImageMeta(imageID int, originalBounds, resizedBounds, window image.R
 	return tf.NewTensor(meta)
 }
 
-func getAnchors(imageBounds image.Rectangle) [1][][4]float32 {
+func getAnchors(imageBounds image.Rectangle) (*tf.Tensor, error) {
 	backboneStrides := []int{4, 8, 16, 32, 64}
 	backboneShapes := computeBackboneShapes(imageBounds, backboneStrides)
 
 	anchorScales := []int{32, 64, 128, 256, 512}
 	anchorRatios := []float32{0.5, 1, 2}
 	anchorStride := 1
-	return generatePyramidAnchors(
+
+	a := generatePyramidAnchors(
 		anchorScales,
 		anchorRatios,
 		backboneShapes,
 		backboneStrides,
 		anchorStride)
+
+	return tf.NewTensor(a)
 }
 
 func computeBackboneShapes(imageBounds image.Rectangle, backboneStrides []int) [][]float32 {
