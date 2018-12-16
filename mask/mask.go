@@ -1,6 +1,7 @@
 package mask
 
 import (
+	"fmt"
 	"image"
 	"math"
 
@@ -71,12 +72,34 @@ func (r *RCNN) Inception(img image.Image) (*string, error) {
 		return nil, errors.New("predictions are empty")
 	}
 
+	fmt.Println(res[0])
+
+	res2, ok := result[3].Value().([][][][][]float32)
+	if !ok {
+		return nil, errors.Errorf("result has unexpected type %T", result[3].Value())
+	}
+
+	if len(res2) < 1 {
+		return nil, errors.New("predictions are empty")
+	}
+
+	fmt.Println(len(res2))
+	fmt.Println(len(res2[0]))
+	fmt.Println(len(res2[0][0]))
+	fmt.Println(len(res2[0][0][0]))
+	fmt.Println(len(res2[0][0][0][0]))
+	fmt.Println(res2[0][0][0][0])
+	fmt.Println(res2[0][1][0][0])
+	fmt.Println(res2[0][2][0][0])
+	fmt.Println(res2[0][0][1][0])
+	fmt.Println(res2[0][0][2][0])
+
 	str := ""
 	return &str, nil
 }
 
 func makeInputs(img image.Image) (imgTensor, meta, anchors *tf.Tensor, err error) {
-	resized := imageutils.Scaled(img, 800, 800)
+	resized := imageutils.Scaled(img, 1024, 1024)
 
 	imgTensor, err = imageToTensor(resized)
 	if err != nil {
@@ -152,6 +175,8 @@ func getAnchors(imageBounds image.Rectangle) (*tf.Tensor, error) {
 		backboneShapes,
 		backboneStrides,
 		anchorStride)
+
+	normalizeAnchors(a, imageBounds)
 
 	return tf.NewTensor(a)
 }
@@ -292,3 +317,12 @@ boxes[196605] : 997.3725, 1008.6862, 1042.6274, 1031.3137
 boxes[196606] : 1004, 1004, 1036, 1036
 boxes[196607] : 1008.6862, 997.3725, 1031.3137, 1042.6274
 */
+
+func normalizeAnchors(a [1][][4]float32, imageBounds image.Rectangle) {
+	for i := range a[0] {
+		a[0][i][0] = a[0][i][0] / float32(imageBounds.Dy())
+		a[0][i][1] = a[0][i][1] / float32(imageBounds.Dx())
+		a[0][i][2] = (a[0][i][2] - 1) / float32(imageBounds.Dy())
+		a[0][i][3] = (a[0][i][3] - 1) / float32(imageBounds.Dx())
+	}
+}

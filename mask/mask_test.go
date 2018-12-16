@@ -20,7 +20,8 @@ func TestRunRCNN(t *testing.T) {
 	r, err := NewRCNN("mask_rcnn_coco", "myTag")
 	require.NoError(t, err)
 
-	img, err := imageutils.FromURL("https://upload.wikimedia.org/wikipedia/commons/8/82/Denmark_Street_in_2010%2C_viewed_from_its_junction_with_Charing_Cross_Road%2C_by_David_Dixon%2C_geograph.org.uk_1665474.jpg")
+	// img, err := imageutils.FromURL("https://upload.wikimedia.org/wikipedia/commons/8/82/Denmark_Street_in_2010%2C_viewed_from_its_junction_with_Charing_Cross_Road%2C_by_David_Dixon%2C_geograph.org.uk_1665474.jpg")
+	img, err := imageutils.FromFile("/home/gildas/Downloads/20181209_015535_HDR_square_1024.jpg")
 	require.NoError(t, err)
 
 	s, err := r.Inception(img)
