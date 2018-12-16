@@ -109,9 +109,9 @@ func imageToTensor(img image.Image) (*tf.Tensor, error) {
 	for i := 0; i < int(imageWidth); i++ {
 		for j := 0; j < int(imageHeight); j++ {
 			r, g, b, _ := img.At(i, j).RGBA()
-			image[0][j][i][0] = convert(r)
-			image[0][j][i][1] = convert(g)
-			image[0][j][i][2] = convert(b)
+			image[0][j][i][0] = convert(r) - 123.7
+			image[0][j][i][1] = convert(g) - 116.8
+			image[0][j][i][2] = convert(b) - 103.9
 		}
 	}
 
@@ -119,7 +119,7 @@ func imageToTensor(img image.Image) (*tf.Tensor, error) {
 }
 
 func convert(value uint32) float32 {
-	return (float32(value>>8) - float32(127.5)) / float32(127.5)
+	return float32(value >> 8)
 }
 
 func composeImageMeta(imageID int, originalBounds, resizedBounds, window image.Rectangle,
