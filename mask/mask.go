@@ -1,12 +1,10 @@
 package mask
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
 	"math"
-	"time"
 
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/pkg/errors"
@@ -23,12 +21,6 @@ func NewRCNN(modelPath, tagName string) (*RCNN, error) {
 		return nil, errors.Wrapf(err,
 			"failed to load saved model %q / tag %q", modelPath, tagName)
 	}
-
-	// for _, op := range model.Graph.Operations() {
-	// 	fmt.Println(op.Name())
-	// }
-
-	time.Sleep(time.Second)
 
 	return &RCNN{model: model}, nil
 }
@@ -90,8 +82,6 @@ func (m *Masks) DrawAllOnImage(detections *Detections, img image.Image) image.Im
 			break
 		}
 
-		fmt.Println(classes[classID], ":", score)
-
 		img = m.DrawOnImage(i, classID, box, img, colors[i])
 	}
 
@@ -112,9 +102,6 @@ func (m *Masks) DrawOnImage(detectionID, classID int, box image.Rectangle, img i
 	}
 	maskResized := imageutils.Scaled(mask, uint(box.Bounds().Dx()), uint(box.Bounds().Dy()))
 
-	fmt.Println("withMask:", withMask.Bounds())
-	fmt.Println("box:", box.Bounds())
-	fmt.Println("maskResized:", maskResized.Bounds())
 	draw.Draw(withMask, box.Bounds(), maskResized, image.ZP, draw.Over)
 
 	for x := box.Bounds().Min.X; x < box.Bounds().Max.X; x++ {
@@ -170,8 +157,6 @@ func (r *RCNN) Inception(img image.Image) (*Detections, *Masks, error) {
 		return nil, nil, errors.New("predictions are empty")
 	}
 
-	fmt.Println(detections[0])
-
 	masks, ok := result[3].Value().([][][][][]float32)
 	if !ok {
 		return nil, nil, errors.Errorf("result has unexpected type %T", result[3].Value())
@@ -180,17 +165,6 @@ func (r *RCNN) Inception(img image.Image) (*Detections, *Masks, error) {
 	if len(masks) < 1 {
 		return nil, nil, errors.New("predictions are empty")
 	}
-
-	fmt.Println(len(masks))
-	fmt.Println(len(masks[0]))
-	fmt.Println(len(masks[0][0]))
-	fmt.Println(len(masks[0][0][0]))
-	fmt.Println(len(masks[0][0][0][0]))
-	fmt.Println(masks[0][0][0][0])
-	fmt.Println(masks[0][1][0][0])
-	fmt.Println(masks[0][2][0][0])
-	fmt.Println(masks[0][0][1][0])
-	fmt.Println(masks[0][0][2][0])
 
 	return &Detections{Values: detections}, &Masks{Values: masks}, nil
 }
