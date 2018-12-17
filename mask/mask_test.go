@@ -29,12 +29,14 @@ func TestRunRCNN(t *testing.T) {
 	detections, masks, err := r.Inception(img)
 	require.NoError(t, err)
 
-	withMask := masks.DrawAllOnImage(detections, img)
+	maskImages := masks.GetAllOnImage(detections, img)
 
-	f, err := os.Create("withmask.png")
-	assert.NoError(t, err)
-	err = png.Encode(f, withMask)
-	assert.NoError(t, err)
+	for i, mi := range maskImages {
+		f, err := os.Create(fmt.Sprintf("withmask-%d-%s.png", i, classes[int(detections.Values[0][i][4])]))
+		assert.NoError(t, err)
+		err = png.Encode(f, mi)
+		assert.NoError(t, err)
+	}
 }
 
 func TestGenerateAnchors(t *testing.T) {

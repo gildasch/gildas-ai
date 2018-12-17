@@ -63,7 +63,9 @@ var colors = []color.Color{
 	color.NRGBA{B: 255, R: 255, A: 128},
 }
 
-func (m *Masks) DrawAllOnImage(detections *Detections, img image.Image) image.Image {
+func (m *Masks) GetAllOnImage(detections *Detections, img image.Image) []image.Image {
+	var masks []image.Image
+
 	for i := range detections.Values[0] {
 		box := image.Rectangle{
 			Min: image.Point{
@@ -82,15 +84,14 @@ func (m *Masks) DrawAllOnImage(detections *Detections, img image.Image) image.Im
 			break
 		}
 
-		img = m.DrawOnImage(i, classID, box, img, colors[i])
+		masks = append(masks, m.GetOnImage(i, classID, box, img, colors[i]))
 	}
 
-	return img
+	return masks
 }
 
-func (m *Masks) DrawOnImage(detectionID, classID int, box image.Rectangle, img image.Image, c color.Color) image.Image {
-	withMask := image.NewNRGBA(img.Bounds())
-	draw.Draw(withMask, img.Bounds(), img, image.ZP, draw.Src)
+func (m *Masks) GetOnImage(detectionID, classID int, box image.Rectangle, img image.Image, c color.Color) image.Image {
+	maskImage := image.NewNRGBA(img.Bounds())
 
 	mask := image.NewNRGBA(image.Rect(0, 0, 28, 28))
 	for x := mask.Bounds().Min.X; x < mask.Bounds().Max.X; x++ {
@@ -102,19 +103,19 @@ func (m *Masks) DrawOnImage(detectionID, classID int, box image.Rectangle, img i
 	}
 	maskResized := imageutils.Scaled(mask, uint(box.Bounds().Dx()), uint(box.Bounds().Dy()))
 
-	draw.Draw(withMask, box.Bounds(), maskResized, image.ZP, draw.Over)
+	draw.Draw(maskImage, box.Bounds(), maskResized, image.ZP, draw.Over)
 
 	for x := box.Bounds().Min.X; x < box.Bounds().Max.X; x++ {
-		withMask.Set(x, box.Bounds().Min.Y, color.NRGBA{R: 255})
-		withMask.Set(x, box.Bounds().Max.Y, color.NRGBA{R: 255})
+		maskImage.Set(x, box.Bounds().Min.Y, color.NRGBA{R: 255})
+		maskImage.Set(x, box.Bounds().Max.Y, color.NRGBA{R: 255})
 	}
 
 	for y := box.Bounds().Min.Y; y < box.Bounds().Max.Y; y++ {
-		withMask.Set(box.Bounds().Min.X, y, color.NRGBA{R: 255})
-		withMask.Set(box.Bounds().Max.X, y, color.NRGBA{R: 255})
+		maskImage.Set(box.Bounds().Min.X, y, color.NRGBA{R: 255})
+		maskImage.Set(box.Bounds().Max.X, y, color.NRGBA{R: 255})
 	}
 
-	return withMask
+	return maskImage
 }
 
 func (r *RCNN) Inception(img image.Image) (*Detections, *Masks, error) {
