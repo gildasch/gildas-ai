@@ -2,6 +2,8 @@ package mask
 
 import (
 	"fmt"
+	"image/png"
+	"os"
 	"testing"
 
 	"github.com/gildasch/gildas-ai/imageutils"
@@ -24,10 +26,15 @@ func TestRunRCNN(t *testing.T) {
 	img, err := imageutils.FromFile("/home/gildas/Downloads/20181209_015535_HDR_square_1024.jpg")
 	require.NoError(t, err)
 
-	s, err := r.Inception(img)
+	detections, masks, err := r.Inception(img)
 	require.NoError(t, err)
 
-	fmt.Println(s)
+	withMask := masks.DrawAllOnImage(detections, img)
+
+	f, err := os.Create("withmask.png")
+	assert.NoError(t, err)
+	err = png.Encode(f, withMask)
+	assert.NoError(t, err)
 }
 
 func TestGenerateAnchors(t *testing.T) {

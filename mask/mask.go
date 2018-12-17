@@ -3,7 +3,10 @@ package mask
 import (
 	"fmt"
 	"image"
+	"image/color"
+	"image/draw"
 	"math"
+	"time"
 
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/pkg/errors"
@@ -25,6 +28,8 @@ func NewRCNN(modelPath, tagName string) (*RCNN, error) {
 	// 	fmt.Println(op.Name())
 	// }
 
+	time.Sleep(time.Second)
+
 	return &RCNN{model: model}, nil
 }
 
@@ -32,10 +37,103 @@ func (r *RCNN) Close() error {
 	return r.model.Session.Close()
 }
 
-func (r *RCNN) Inception(img image.Image) (*string, error) {
+type Detections struct {
+	Values [][][]float32
+}
+
+type Masks struct {
+	Values [][][][][]float32
+}
+
+var classes = []string{
+	"BG", "person", "bicycle", "car", "motorcycle", "airplane",
+	"bus", "train", "truck", "boat", "traffic light",
+	"fire hydrant", "stop sign", "parking meter", "bench", "bird",
+	"cat", "dog", "horse", "sheep", "cow", "elephant", "bear",
+	"zebra", "giraffe", "backpack", "umbrella", "handbag", "tie",
+	"suitcase", "frisbee", "skis", "snowboard", "sports ball",
+	"kite", "baseball bat", "baseball glove", "skateboard",
+	"surfboard", "tennis racket", "bottle", "wine glass", "cup",
+	"fork", "knife", "spoon", "bowl", "banana", "apple",
+	"sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza",
+	"donut", "cake", "chair", "couch", "potted plant", "bed",
+	"dining table", "toilet", "tv", "laptop", "mouse", "remote",
+	"keyboard", "cell phone", "microwave", "oven", "toaster",
+	"sink", "refrigerator", "book", "clock", "vase", "scissors",
+	"teddy bear", "hair drier", "toothbrush"}
+
+var colors = []color.Color{
+	color.NRGBA{R: 255, A: 128},
+	color.NRGBA{G: 255, A: 128},
+	color.NRGBA{B: 255, A: 128},
+	color.NRGBA{R: 255, G: 255, A: 128},
+	color.NRGBA{G: 255, B: 255, A: 128},
+	color.NRGBA{B: 255, R: 255, A: 128},
+}
+
+func (m *Masks) DrawAllOnImage(detections *Detections, img image.Image) image.Image {
+	for i := range detections.Values[0] {
+		box := image.Rectangle{
+			Min: image.Point{
+				X: int(detections.Values[0][i][1] * float32(img.Bounds().Dx())),
+				Y: int(detections.Values[0][i][0] * float32(img.Bounds().Dy())),
+			},
+			Max: image.Point{
+				X: int(detections.Values[0][i][3] * float32(img.Bounds().Dx())),
+				Y: int(detections.Values[0][i][2] * float32(img.Bounds().Dy())),
+			},
+		}
+		classID := int(detections.Values[0][i][4])
+		score := detections.Values[0][i][5]
+
+		if score == 0 {
+			break
+		}
+
+		fmt.Println(classes[classID], ":", score)
+
+		img = m.DrawOnImage(i, classID, box, img, colors[i])
+	}
+
+	return img
+}
+
+func (m *Masks) DrawOnImage(detectionID, classID int, box image.Rectangle, img image.Image, c color.Color) image.Image {
+	withMask := image.NewNRGBA(img.Bounds())
+	draw.Draw(withMask, img.Bounds(), img, image.ZP, draw.Src)
+
+	mask := image.NewNRGBA(image.Rect(0, 0, 28, 28))
+	for x := mask.Bounds().Min.X; x < mask.Bounds().Max.X; x++ {
+		for y := mask.Bounds().Min.Y; y < mask.Bounds().Max.Y; y++ {
+			if m.Values[0][detectionID][y][x][classID] > 0.5 {
+				mask.Set(x, y, c)
+			}
+		}
+	}
+	maskResized := imageutils.Scaled(mask, uint(box.Bounds().Dx()), uint(box.Bounds().Dy()))
+
+	fmt.Println("withMask:", withMask.Bounds())
+	fmt.Println("box:", box.Bounds())
+	fmt.Println("maskResized:", maskResized.Bounds())
+	draw.Draw(withMask, box.Bounds(), maskResized, image.ZP, draw.Over)
+
+	for x := box.Bounds().Min.X; x < box.Bounds().Max.X; x++ {
+		withMask.Set(x, box.Bounds().Min.Y, color.NRGBA{R: 255})
+		withMask.Set(x, box.Bounds().Max.Y, color.NRGBA{R: 255})
+	}
+
+	for y := box.Bounds().Min.Y; y < box.Bounds().Max.Y; y++ {
+		withMask.Set(box.Bounds().Min.X, y, color.NRGBA{R: 255})
+		withMask.Set(box.Bounds().Max.X, y, color.NRGBA{R: 255})
+	}
+
+	return withMask
+}
+
+func (r *RCNN) Inception(img image.Image) (*Detections, *Masks, error) {
 	imgTensor, meta, anchors, err := makeInputs(img)
 	if err != nil {
-		return nil, errors.Wrap(err, "error converting image to tensor")
+		return nil, nil, errors.Wrap(err, "error converting image to tensor")
 	}
 
 	result, err := r.model.Session.Run(
@@ -56,46 +154,45 @@ func (r *RCNN) Inception(img image.Image) (*string, error) {
 		nil,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "error running the model session")
+		return nil, nil, errors.Wrap(err, "error running the model session")
 	}
 
 	if len(result) < 1 {
-		return nil, errors.New("result is empty")
+		return nil, nil, errors.New("result is empty")
 	}
 
-	res, ok := result[0].Value().([][][]float32)
+	detections, ok := result[0].Value().([][][]float32)
 	if !ok {
-		return nil, errors.Errorf("result has unexpected type %T", result[0].Value())
+		return nil, nil, errors.Errorf("result has unexpected type %T", result[0].Value())
 	}
 
-	if len(res) < 1 {
-		return nil, errors.New("predictions are empty")
+	if len(detections) < 1 {
+		return nil, nil, errors.New("predictions are empty")
 	}
 
-	fmt.Println(res[0])
+	fmt.Println(detections[0])
 
-	res2, ok := result[3].Value().([][][][][]float32)
+	masks, ok := result[3].Value().([][][][][]float32)
 	if !ok {
-		return nil, errors.Errorf("result has unexpected type %T", result[3].Value())
+		return nil, nil, errors.Errorf("result has unexpected type %T", result[3].Value())
 	}
 
-	if len(res2) < 1 {
-		return nil, errors.New("predictions are empty")
+	if len(masks) < 1 {
+		return nil, nil, errors.New("predictions are empty")
 	}
 
-	fmt.Println(len(res2))
-	fmt.Println(len(res2[0]))
-	fmt.Println(len(res2[0][0]))
-	fmt.Println(len(res2[0][0][0]))
-	fmt.Println(len(res2[0][0][0][0]))
-	fmt.Println(res2[0][0][0][0])
-	fmt.Println(res2[0][1][0][0])
-	fmt.Println(res2[0][2][0][0])
-	fmt.Println(res2[0][0][1][0])
-	fmt.Println(res2[0][0][2][0])
+	fmt.Println(len(masks))
+	fmt.Println(len(masks[0]))
+	fmt.Println(len(masks[0][0]))
+	fmt.Println(len(masks[0][0][0]))
+	fmt.Println(len(masks[0][0][0][0]))
+	fmt.Println(masks[0][0][0][0])
+	fmt.Println(masks[0][1][0][0])
+	fmt.Println(masks[0][2][0][0])
+	fmt.Println(masks[0][0][1][0])
+	fmt.Println(masks[0][0][2][0])
 
-	str := ""
-	return &str, nil
+	return &Detections{Values: detections}, &Masks{Values: masks}, nil
 }
 
 func makeInputs(img image.Image) (imgTensor, meta, anchors *tf.Tensor, err error) {
