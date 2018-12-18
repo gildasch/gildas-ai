@@ -50,7 +50,7 @@ func FaceSwap(extractor Extractor, detector LandmarkDetector, dest, src image.Im
 		}
 		fmt.Println("bounds after", destCrops[i].Bounds())
 
-		gg.SavePNG(fmt.Sprintf("out-swap-%d.png", i), destCrops[i])
+		// gg.SavePNG(fmt.Sprintf("out-swap-%d.png", i), destCrops[i])
 	}
 
 	out := image.NewRGBA(dest.Bounds())
@@ -66,8 +66,8 @@ func FaceSwap(extractor Extractor, detector LandmarkDetector, dest, src image.Im
 var counter = 1
 
 func swap(detector LandmarkDetector, src, dest image.Image, blur float64) (image.Image, error) {
-	gg.SavePNG(fmt.Sprintf("out-swap-crop-src-%d.png", counter), src)
-	gg.SavePNG(fmt.Sprintf("out-swap-crop-dest-%d.png", counter), dest)
+	// gg.SavePNG(fmt.Sprintf("out-swap-crop-src-%d.png", counter), src)
+	// gg.SavePNG(fmt.Sprintf("out-swap-crop-dest-%d.png", counter), dest)
 
 	destBlurred := imaging.Blur(dest, blur)
 	destBlurredAligned := image.NewRGBA(dest.Bounds())
@@ -104,7 +104,7 @@ func swap(detector LandmarkDetector, src, dest image.Image, blur float64) (image
 	maskAligned := image.NewRGBA(out.Bounds())
 	draw.Draw(maskAligned, out.Bounds(), mask, image.ZP, draw.Src)
 
-	gg.SavePNG(fmt.Sprintf("out-swap-mask-%d.png", counter), distorted)
+	// gg.SavePNG(fmt.Sprintf("out-swap-mask-%d.png", counter), distorted)
 
 	distortedAligned := image.NewRGBA(out.Bounds())
 	draw.Draw(distortedAligned, out.Bounds(), distorted, image.ZP, draw.Src)
@@ -118,7 +118,7 @@ func swap(detector LandmarkDetector, src, dest image.Image, blur float64) (image
 	fmt.Println("distorted bounds", distortedAligned.Bounds())
 	draw.DrawMask(out, out.Bounds(), distortedAligned, out.Bounds().Min, maskAligned, out.Bounds().Min, draw.Over)
 
-	gg.SavePNG(fmt.Sprintf("out-swap-truc-%d.png", counter), out)
+	// gg.SavePNG(fmt.Sprintf("out-swap-truc-%d.png", counter), out)
 	counter++
 
 	return out, nil
@@ -234,7 +234,7 @@ func (v *values) median() float64 {
 }
 
 func blend(on *image.RGBA, to image.Image) {
-	gg.SavePNG("out-blurred.png", to)
+	// gg.SavePNG("out-blurred.png", to)
 	var onH, onS, onL, toH, toS, toL values
 	for x := to.Bounds().Min.X; x < to.Bounds().Max.X; x++ {
 		for y := to.Bounds().Min.Y; y < to.Bounds().Max.Y; y++ {
