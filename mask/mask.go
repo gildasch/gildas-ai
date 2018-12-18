@@ -5,8 +5,10 @@ import (
 	"image/color"
 	"image/draw"
 	"math"
+	"math/rand"
 
 	"github.com/gildasch/gildas-ai/imageutils"
+	colorful "github.com/lucasb-eyer/go-colorful"
 	"github.com/pkg/errors"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 )
@@ -54,13 +56,9 @@ var classes = []string{
 	"sink", "refrigerator", "book", "clock", "vase", "scissors",
 	"teddy bear", "hair drier", "toothbrush"}
 
-var colors = []color.Color{
-	color.NRGBA{R: 255, A: 128},
-	color.NRGBA{G: 255, A: 128},
-	color.NRGBA{B: 255, A: 128},
-	color.NRGBA{R: 255, G: 255, A: 128},
-	color.NRGBA{G: 255, B: 255, A: 128},
-	color.NRGBA{B: 255, R: 255, A: 128},
+func nextColor() color.Color {
+	r, g, b := colorful.Hsv(float64(rand.Intn(360)), 1, 0.7).RGB255()
+	return color.NRGBA{R: r, G: g, B: b, A: 128}
 }
 
 func (m *Masks) GetAllOnImage(detections *Detections, img image.Image) []image.Image {
@@ -84,7 +82,7 @@ func (m *Masks) GetAllOnImage(detections *Detections, img image.Image) []image.I
 			break
 		}
 
-		masks = append(masks, m.GetOnImage(i, classID, box, img, colors[i]))
+		masks = append(masks, m.GetOnImage(i, classID, box, img, nextColor()))
 	}
 
 	return masks

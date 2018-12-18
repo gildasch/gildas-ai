@@ -2,6 +2,8 @@ package mask
 
 import (
 	"fmt"
+	"image"
+	"image/draw"
 	"image/png"
 	"os"
 	"testing"
@@ -31,12 +33,22 @@ func TestRunRCNN(t *testing.T) {
 
 	maskImages := masks.GetAllOnImage(detections, img)
 
+	withMasks := image.NewNRGBA(img.Bounds())
+	draw.Draw(withMasks, img.Bounds(), img, image.ZP, draw.Over)
+
 	for i, mi := range maskImages {
+		draw.Draw(withMasks, img.Bounds(), mi, image.ZP, draw.Over)
+
 		f, err := os.Create(fmt.Sprintf("withmask-%d-%s.png", i, classes[int(detections.Values[0][i][4])]))
 		assert.NoError(t, err)
 		err = png.Encode(f, mi)
 		assert.NoError(t, err)
 	}
+
+	f, err := os.Create("withmask-all.png")
+	assert.NoError(t, err)
+	err = png.Encode(f, withMasks)
+	assert.NoError(t, err)
 }
 
 func TestGenerateAnchors(t *testing.T) {
