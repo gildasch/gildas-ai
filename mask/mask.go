@@ -1,6 +1,7 @@
 package mask
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
@@ -91,26 +92,47 @@ func (m *Masks) GetAllOnImages(detections *Detections, img image.Image) []image.
 func (m *Masks) GetOnImage(detectionID, classID int, box image.Rectangle, img image.Image, c color.Color) image.Image {
 	maskImage := image.NewNRGBA(img.Bounds())
 
+	col, ok := colorful.MakeColor(c)
+	if !ok {
+		fmt.Println("color is invisible")
+		return maskImage
+	}
+
 	mask := image.NewNRGBA(image.Rect(0, 0, 28, 28))
 	for x := mask.Bounds().Min.X; x < mask.Bounds().Max.X; x++ {
 		for y := mask.Bounds().Min.Y; y < mask.Bounds().Max.Y; y++ {
-			if m.Values[0][detectionID][y][x][classID] > 0.5 {
-				mask.Set(x, y, c)
-			}
+			h, s, _ := col.Hsv()
+			mask.Set(x, y, colorful.Hsv(h, s, float64(m.Values[0][detectionID][x][y][classID])))
 		}
 	}
 	maskResized := imageutils.Scaled(mask, uint(box.Bounds().Dx()), uint(box.Bounds().Dy()))
 
-	draw.Draw(maskImage, box.Bounds(), maskResized, image.ZP, draw.Over)
+	maskThreshold := image.NewNRGBA(img.Bounds())
+	for x := maskResized.Bounds().Min.Y; x < maskResized.Bounds().Max.Y; x++ {
+		for y := maskResized.Bounds().Min.X; y < maskResized.Bounds().Max.X; y++ {
+			c, ok := colorful.MakeColor(maskResized.At(y, x))
+			if !ok {
+				continue
+			}
+			h, s, l := c.Hsv()
+			if l < 0.5 {
+				continue
+			}
+			r, g, b, _ := colorful.Hsv(h, s, 1).RGBA()
+			maskThreshold.Set(x, y, color.NRGBA{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8), A: 128})
+		}
+	}
+
+	draw.Draw(maskImage, box.Bounds(), maskThreshold, image.ZP, draw.Over)
 
 	for x := box.Bounds().Min.X; x < box.Bounds().Max.X; x++ {
-		maskImage.Set(x, box.Bounds().Min.Y, color.NRGBA{R: 255})
-		maskImage.Set(x, box.Bounds().Max.Y, color.NRGBA{R: 255})
+		maskImage.Set(x, box.Bounds().Min.Y, color.NRGBA{R: 255, A: 255})
+		maskImage.Set(x, box.Bounds().Max.Y, color.NRGBA{R: 255, A: 255})
 	}
 
 	for y := box.Bounds().Min.Y; y < box.Bounds().Max.Y; y++ {
-		maskImage.Set(box.Bounds().Min.X, y, color.NRGBA{R: 255})
-		maskImage.Set(box.Bounds().Max.X, y, color.NRGBA{R: 255})
+		maskImage.Set(box.Bounds().Min.X, y, color.NRGBA{R: 255, A: 255})
+		maskImage.Set(box.Bounds().Max.X, y, color.NRGBA{R: 255, A: 255})
 	}
 
 	return maskImage

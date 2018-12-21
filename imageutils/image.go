@@ -65,7 +65,7 @@ func GIFFromURL(url string) (*gif.GIF, error) {
 }
 
 func Scaled(img image.Image, height, width uint) image.Image {
-	return resize.Resize(width, height, img, resize.NearestNeighbor)
+	return resize.Resize(width, height, img, resize.Bicubic)
 }
 
 func FromZip(zipFile io.ReaderAt, size int64) (images map[string]image.Image, errs []error) {
