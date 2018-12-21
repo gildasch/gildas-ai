@@ -1,4 +1,4 @@
-FROM gildasch/tensorflow-go
+FROM gildasch/tensorflow-go:v1.8
 
 RUN apt-get -y update
 

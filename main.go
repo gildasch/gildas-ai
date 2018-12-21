@@ -134,7 +134,7 @@ func main() {
 		store := persistence.NewInMemoryStore(365 * 24 * time.Hour)
 		app.GET("/faceswap", cache.CachePage(store, 12*time.Hour, api.FaceSwapHandler(extractor, landmark)))
 
-		maskDetector, err := mask.NewRCNN("mask/mask_rcnn_coco", "myTag")
+		maskDetector, err := mask.NewRCNN("mask/mask_rcnn_coco_tf_1.8.0", "myTag")
 		if err != nil {
 			log.Fatal(err)
 		}
