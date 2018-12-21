@@ -28,7 +28,7 @@ func TestRunRCNN(t *testing.T) {
 	img, err := imageutils.FromFile("/home/gildas/Downloads/20181209_015535_HDR_square_1024.jpg")
 	require.NoError(t, err)
 
-	detections, masks, err := r.Inception(img)
+	detections, masks, err := r.Detect(img)
 	require.NoError(t, err)
 
 	maskImages := masks.GetAllOnImage(detections, img)

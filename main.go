@@ -14,6 +14,7 @@ import (
 	"github.com/gildasch/gildas-ai/faces/detection"
 	"github.com/gildasch/gildas-ai/faces/landmarks"
 	"github.com/gildasch/gildas-ai/imageutils"
+	"github.com/gildasch/gildas-ai/mask"
 	"github.com/gildasch/gildas-ai/objects/classifiers"
 	"github.com/gildasch/gildas-ai/objects/listing/stores/sqlite"
 	"github.com/gin-contrib/cache"
@@ -115,7 +116,8 @@ func main() {
 			"templates/predictions.html",
 			"templates/faces.html",
 			"templates/photos.html",
-			"templates/faceswap.html")
+			"templates/faceswap.html",
+			"templates/masks.html")
 		app.GET("/object/api", api.ClassifyHandler(classifiers, false))
 		app.GET("/object", api.ClassifyHandler(classifiers, true))
 
@@ -131,6 +133,14 @@ func main() {
 
 		store := persistence.NewInMemoryStore(365 * 24 * time.Hour)
 		app.GET("/faceswap", cache.CachePage(store, 12*time.Hour, api.FaceSwapHandler(extractor, landmark)))
+
+		maskDetector, err := mask.NewRCNN("mask/mask_rcnn_coco", "myTag")
+		if err != nil {
+			log.Fatal(err)
+		}
+		masksStore := map[string][]byte{}
+		app.GET("/masks", api.MaskHandler(maskDetector, masksStore))
+		app.GET("/masks/result.jpg", api.MaskImageHandler(masksStore))
 
 		app.Run()
 	}

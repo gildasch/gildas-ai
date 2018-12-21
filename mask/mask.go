@@ -62,6 +62,19 @@ func nextColor() color.Color {
 	return color.NRGBA{R: r, G: g, B: b, A: 128}
 }
 
+func (m *Masks) DrawMasks(detections *Detections, img image.Image) image.Image {
+	maskImages := m.GetAllOnImage(detections, img)
+
+	withMasks := image.NewNRGBA(img.Bounds())
+	draw.Draw(withMasks, img.Bounds(), img, image.ZP, draw.Over)
+
+	for _, mi := range maskImages {
+		draw.Draw(withMasks, img.Bounds(), mi, image.ZP, draw.Over)
+	}
+
+	return withMasks
+}
+
 func (m *Masks) GetAllOnImage(detections *Detections, img image.Image) []image.Image {
 	var masks []image.Image
 
@@ -138,7 +151,7 @@ func (m *Masks) GetOnImage(detectionID, classID int, box image.Rectangle, img im
 	return maskImage
 }
 
-func (r *RCNN) Inception(img image.Image) (*Detections, *Masks, error) {
+func (r *RCNN) Detect(img image.Image) (*Detections, *Masks, error) {
 	imgTensor, meta, anchors, err := makeInputs(img)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error converting image to tensor")
