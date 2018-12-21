@@ -18,8 +18,11 @@ type RCNN struct {
 	model *tf.SavedModel
 }
 
+var confInterOpParallelismThreads1 = []byte{0x28, 0x01}
+
 func NewRCNN(modelPath, tagName string) (*RCNN, error) {
-	model, err := tf.LoadSavedModel(modelPath, []string{tagName}, nil)
+	model, err := tf.LoadSavedModel(modelPath, []string{tagName}, &tf.SessionOptions{
+		Config: confInterOpParallelismThreads1})
 	if err != nil {
 		return nil, errors.Wrapf(err,
 			"failed to load saved model %q / tag %q", modelPath, tagName)
