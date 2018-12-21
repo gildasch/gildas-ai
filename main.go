@@ -138,7 +138,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		masksStore := map[string][]byte{}
+		masksStore := map[string]api.MaskResult{}
 		app.GET("/masks", api.MaskHandler(maskDetector, masksStore))
 		app.GET("/masks/result.jpg", api.MaskImageHandler(masksStore))
 

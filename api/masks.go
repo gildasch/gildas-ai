@@ -18,7 +18,12 @@ type Detector interface {
 	Detect(img image.Image) (*mask.Detections, *mask.Masks, error)
 }
 
-func MaskHandler(detector Detector, store map[string][]byte) gin.HandlerFunc {
+type MaskResult struct {
+	jpgData []byte
+	elapsed time.Duration
+}
+
+func MaskHandler(detector Detector, store map[string]MaskResult) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		imageURL := strings.TrimPrefix(c.Query("imageurl"), "/")
 
@@ -27,49 +32,29 @@ func MaskHandler(detector Detector, store map[string][]byte) gin.HandlerFunc {
 			return
 		}
 
-		img, err := imageutils.FromURL(imageURL)
-		if err != nil {
-			c.AbortWithStatusJSON(
-				http.StatusBadRequest,
-				fmt.Sprintf("cannot read remote image %q: %v\n", imageURL, err))
-			return
+		if _, ok := store[imageURL]; !ok {
+			res, err := calculateMask(detector, imageURL)
+			if err != nil {
+				c.AbortWithStatusJSON(
+					http.StatusBadRequest,
+					fmt.Sprintf("error processing image %q: %v\n", imageURL, err))
+				return
+			}
+			store[imageURL] = *res
 		}
-
-		start := time.Now()
-		detecs, masks, err := detector.Detect(img)
-		if err != nil {
-			c.AbortWithStatusJSON(
-				http.StatusBadRequest,
-				fmt.Sprintf("cannot detect from remote image %q: %v\n", imageURL, err))
-			return
-		}
-		elapsed := time.Since(start)
-
-		withMasks := masks.DrawMasks(detecs, img)
-
-		var withMasksBuf bytes.Buffer
-		err = jpeg.Encode(&withMasksBuf, withMasks, nil)
-		if err != nil {
-			c.AbortWithStatusJSON(
-				http.StatusInternalServerError,
-				fmt.Sprintf("could not encode result: %v\n", err))
-			return
-		}
-
-		store[imageURL] = withMasksBuf.Bytes()
 
 		c.HTML(http.StatusOK, "masks.html", gin.H{
 			"imageURL":     imageURL,
 			"maskImageURL": fmt.Sprintf("/masks/result.jpg?imageurl=%s", imageURL),
-			"elapsed":      elapsed,
+			"elapsed":      store[imageURL].elapsed,
 		})
 	}
 }
 
-func MaskImageHandler(store map[string][]byte) gin.HandlerFunc {
+func MaskImageHandler(store map[string]MaskResult) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		imageURL := strings.TrimPrefix(c.Query("imageurl"), "/")
-		data, ok := store[imageURL]
+		res, ok := store[imageURL]
 		if !ok {
 			c.AbortWithStatusJSON(
 				http.StatusNotFound,
@@ -77,6 +62,32 @@ func MaskImageHandler(store map[string][]byte) gin.HandlerFunc {
 			return
 		}
 
-		c.Data(http.StatusOK, "image.jpeg", data)
+		c.Data(http.StatusOK, "image.jpeg", res.jpgData)
 	}
+}
+
+func calculateMask(detector Detector, imageURL string) (*MaskResult, error) {
+	img, err := imageutils.FromURL(imageURL)
+	if err != nil {
+		return nil, err
+	}
+
+	start := time.Now()
+	detecs, masks, err := detector.Detect(img)
+	if err != nil {
+		return nil, err
+	}
+	elapsed := time.Since(start)
+
+	withMasks := masks.DrawMasks(detecs, img)
+
+	var withMasksBuf bytes.Buffer
+	err = jpeg.Encode(&withMasksBuf, withMasks, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &MaskResult{
+		jpgData: withMasksBuf.Bytes(),
+		elapsed: elapsed}, nil
 }
