@@ -61,7 +61,7 @@ func nextColor() color.Color {
 	return color.NRGBA{R: r, G: g, B: b, A: 128}
 }
 
-func (m *Masks) GetAllOnImage(detections *Detections, img image.Image) []image.Image {
+func (m *Masks) GetAllOnImages(detections *Detections, img image.Image) []image.Image {
 	var masks []image.Image
 
 	for i := range detections.Values[0] {

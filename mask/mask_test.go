@@ -31,7 +31,7 @@ func TestRunRCNN(t *testing.T) {
 	detections, masks, err := r.Inception(img)
 	require.NoError(t, err)
 
-	maskImages := masks.GetAllOnImage(detections, img)
+	maskImages := masks.GetAllOnImages(detections, img)
 
 	withMasks := image.NewNRGBA(img.Bounds())
 	draw.Draw(withMasks, img.Bounds(), img, image.ZP, draw.Over)
