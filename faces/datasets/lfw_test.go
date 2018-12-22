@@ -12,6 +12,7 @@ import (
 
 	"github.com/gildasch/gildas-ai/faces"
 	"github.com/gildasch/gildas-ai/faces/descriptors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,11 +22,35 @@ const (
 	minimumNonMatchTest = 10000
 )
 
-func TestLFW(t *testing.T) {
+func TestExtractionOnLFW(t *testing.T) {
 	extractor, err := faces.NewDefaultExtractor("..")
 	require.NoError(t, err)
 
-	descrs, err := extract(extractor)
+	descrs, err := extract(extractor, "")
+	require.NoError(t, err)
+
+	actual, err := json.Marshal(descrs)
+	require.NoError(t, err)
+
+	expected, err := ioutil.ReadFile("lfw_temp-expected.json")
+	require.NoError(t, err)
+
+	assert.JSONEq(t, string(expected), string(actual))
+}
+
+func runEvaluation() bool {
+	return os.Getenv("RUN_LFW_EVALUATION") == "1"
+}
+
+func TestLFWEvaluation(t *testing.T) {
+	if !runEvaluation() {
+		t.SkipNow()
+	}
+
+	extractor, err := faces.NewDefaultExtractor("..")
+	require.NoError(t, err)
+
+	descrs, err := extract(extractor, "lfw_temp.json")
 	require.NoError(t, err)
 
 	fmt.Println(len(descrs))
@@ -68,11 +93,15 @@ evaluation:
 	fmt.Println()
 }
 
-func TestLFWOnSubset(t *testing.T) {
+func TestLFWEvaluationOnSubset(t *testing.T) {
+	if !runEvaluation() {
+		t.SkipNow()
+	}
+
 	extractor, err := faces.NewDefaultExtractor("..")
 	require.NoError(t, err)
 
-	descrs, err := extract(extractor)
+	descrs, err := extract(extractor, "lfw_temp.json")
 	require.NoError(t, err)
 
 	fmt.Println(len(descrs))
@@ -109,13 +138,12 @@ func TestLFWOnSubset(t *testing.T) {
 	fmt.Println()
 }
 
-func extract(extractor *faces.Extractor) (map[string][]descriptors.Descriptors, error) {
-	descrs, ok := loadSaveFile()
+func extract(extractor *faces.Extractor, saveFile string) (map[string][]descriptors.Descriptors, error) {
+	descrs, ok := loadSaveFile(saveFile)
 	if !ok {
 		descrs = map[string][]descriptors.Descriptors{}
 		fmt.Println("Extraction...")
 
-		// nameList := smallSetWithMultiplePictures
 		nameList, err := filepath.Glob("lfw/*")
 		if err != nil {
 			return nil, err
@@ -142,7 +170,6 @@ func extract(extractor *faces.Extractor) (map[string][]descriptors.Descriptors, 
 				}
 
 				_, d, err := extractor.Extract(img)
-				// assert.Len(t, d, 1)
 				if len(d) >= 1 {
 					descrs[name] = append(descrs[name], d[0])
 				}
@@ -150,15 +177,13 @@ func extract(extractor *faces.Extractor) (map[string][]descriptors.Descriptors, 
 		}
 		fmt.Printf("\nExtraction done.\n")
 
-		writeSaveFile(descrs)
+		writeSaveFile(saveFile, descrs)
 	}
 
 	return descrs, nil
 }
 
-const saveFile = "lfw_temp.json"
-
-func loadSaveFile() (map[string][]descriptors.Descriptors, bool) {
+func loadSaveFile(saveFile string) (map[string][]descriptors.Descriptors, bool) {
 	b, err := ioutil.ReadFile(saveFile)
 	if err != nil {
 		return nil, false
@@ -173,7 +198,7 @@ func loadSaveFile() (map[string][]descriptors.Descriptors, bool) {
 	return descrs, true
 }
 
-func writeSaveFile(descrs map[string][]descriptors.Descriptors) error {
+func writeSaveFile(saveFile string, descrs map[string][]descriptors.Descriptors) error {
 	b, err := json.Marshal(descrs)
 	if err != nil {
 		return err
