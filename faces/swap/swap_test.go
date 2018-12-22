@@ -1,19 +1,13 @@
 package swap
 
 import (
-	"bytes"
-	"fmt"
 	"image"
-	"image/png"
-	"io/ioutil"
 	"testing"
-	"time"
 
 	"github.com/gildasch/gildas-ai/faces"
 	"github.com/gildasch/gildas-ai/faces/detection"
 	"github.com/gildasch/gildas-ai/faces/landmarks"
 	"github.com/gildasch/gildas-ai/imageutils"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,7 +31,7 @@ func TestFaceSwap(t *testing.T) {
 	out, err := FaceSwap(extractor, landmark, dest, src, 0)
 	require.NoError(t, err)
 
-	assertImageEqual(t, "faceswap-expected.png", out)
+	imageutils.AssertImageEqual(t, "faceswap-expected.png", out)
 }
 
 func TestSwap(t *testing.T) {
@@ -52,7 +46,7 @@ func TestSwap(t *testing.T) {
 	out, err := swap(landmark, src, dest, 0)
 	require.NoError(t, err)
 
-	assertImageEqual(t, "swap-expected.png", out)
+	imageutils.AssertImageEqual(t, "swap-expected.png", out)
 }
 
 func TestMaskFromPolygon(t *testing.T) {
@@ -63,7 +57,7 @@ func TestMaskFromPolygon(t *testing.T) {
 		{10, 10}, {5, 65}, {17, 85}, {45, 66}, {70, 70}, {60, 30}, {50, 15},
 	})
 
-	assertImageEqual(t, "maskFromPolygon-expected.png", mask)
+	imageutils.AssertImageEqual(t, "maskFromPolygon-expected.png", mask)
 }
 
 func TestMaskFromPolygonWithBounds(t *testing.T) {
@@ -75,29 +69,5 @@ func TestMaskFromPolygonWithBounds(t *testing.T) {
 		{110, 110}, {105, 165}, {117, 185}, {145, 166}, {170, 170}, {160, 130}, {150, 115},
 	})
 
-	assertImageEqual(t, "maskFromPolygonWithBounds-expected.png", mask)
-}
-
-func assertImageEqual(t *testing.T, expectedFilename string, actual image.Image) bool {
-	start := time.Now()
-	defer func() {
-		fmt.Println("assertImageEqual in ", time.Since(start))
-	}()
-
-	expectedBytes, err := ioutil.ReadFile(expectedFilename)
-	if err != nil {
-		t.Errorf("could not read expected image %q: %v", expectedFilename, err)
-		t.FailNow()
-		return false
-	}
-
-	var actualBytes bytes.Buffer
-	err = png.Encode(&actualBytes, actual)
-	if err != nil {
-		t.Errorf("could not encode actual image: %v", err)
-		t.FailNow()
-		return false
-	}
-
-	return assert.Equal(t, expectedBytes, actualBytes.Bytes())
+	imageutils.AssertImageEqual(t, "maskFromPolygonWithBounds-expected.png", mask)
 }

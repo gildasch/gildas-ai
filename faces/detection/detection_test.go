@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"image/draw"
 	"image/jpeg"
+	"image/png"
 	"os"
 	"strings"
 	"testing"
@@ -63,9 +64,18 @@ func TestDetection2(t *testing.T) {
 	detections, err := d.Detect(testImage)
 	require.NoError(t, err)
 
-	actual := detections.Above(0.5)
+	actualDetections := detections.Above(0.5)
+	require.Len(t, actualDetections.Boxes, 1)
 
-	saveCutImage(testImage, actual, "4-face.jpg")
+	box := actualDetections.Boxes[0]
+	actual := image.NewRGBA(box)
+	draw.Draw(actual, box, testImage, box.Min, draw.Src)
+
+	f, _ := os.Create("detection-in-4-expected.png")
+	png.Encode(f, actual)
+	f.Close()
+
+	imageutils.AssertImageEqual(t, "detection-in-4-expected.png", actual)
 }
 
 func saveCutImage(img image.Image, detections Detections, filename string) {
