@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 
+	"github.com/fogleman/gg"
 	"github.com/gildasch/gildas-ai/imageutils"
 	colorful "github.com/lucasb-eyer/go-colorful"
 	"github.com/pkg/errors"
@@ -71,11 +72,27 @@ func (m *Masks) DrawMasks(detections *Detections, img image.Image) image.Image {
 	withMasks := image.NewNRGBA(img.Bounds())
 	draw.Draw(withMasks, img.Bounds(), img, image.ZP, draw.Over)
 
-	for _, mi := range maskImages {
+	for i, mi := range maskImages {
 		draw.Draw(withMasks, img.Bounds(), mi, image.ZP, draw.Over)
+
+		label := classes[int(detections.Values[0][i][4])]
+		score := detections.Values[0][i][5]
+		x := detections.Values[0][i][1]
+		y := detections.Values[0][i][0]
+		draw.Draw(withMasks, img.Bounds(),
+			labelImage(fmt.Sprintf("%s (%.2f%%)", label, score), float64(x), float64(y), img.Bounds()),
+			image.ZP, draw.Over)
 	}
 
 	return withMasks
+}
+
+func labelImage(label string, x, y float64, bounds image.Rectangle) image.Image {
+	ctx := gg.NewContext(bounds.Dx(), bounds.Dy())
+	ctx.SetHexColor("#FFF")
+	ctx.LoadFontFace("LiberationSans-Regular.ttf", 24)
+	ctx.DrawString(label, x*float64(bounds.Dx()), y*float64(bounds.Dy()))
+	return ctx.Image()
 }
 
 func (m *Masks) GetAllOnImage(detections *Detections, img image.Image) []image.Image {
