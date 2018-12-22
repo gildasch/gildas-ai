@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
-	"image/png"
-	"os"
 	"testing"
 
 	"github.com/gildasch/gildas-ai/imageutils"
@@ -13,19 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewRCNN(t *testing.T) {
-	r, err := NewRCNN("mask_rcnn_coco", "myTag")
-	require.NoError(t, err)
-
-	fmt.Println(r)
-}
-
 func TestRunRCNN(t *testing.T) {
 	r, err := NewRCNN("mask_rcnn_coco", "myTag")
 	require.NoError(t, err)
 
-	// img, err := imageutils.FromURL("https://upload.wikimedia.org/wikipedia/commons/8/82/Denmark_Street_in_2010%2C_viewed_from_its_junction_with_Charing_Cross_Road%2C_by_David_Dixon%2C_geograph.org.uk_1665474.jpg")
-	img, err := imageutils.FromFile("/home/gildas/Downloads/20181209_015535_HDR_square_1024.jpg")
+	img, err := imageutils.FromFile("testdata/ruedesmartyrs.jpg")
 	require.NoError(t, err)
 
 	detections, masks, err := r.Detect(img)
@@ -36,19 +26,11 @@ func TestRunRCNN(t *testing.T) {
 	withMasks := image.NewNRGBA(img.Bounds())
 	draw.Draw(withMasks, img.Bounds(), img, image.ZP, draw.Over)
 
-	for i, mi := range maskImages {
+	for _, mi := range maskImages {
 		draw.Draw(withMasks, img.Bounds(), mi, image.ZP, draw.Over)
-
-		f, err := os.Create(fmt.Sprintf("withmask-%d-%s.png", i, classes[int(detections.Values[0][i][4])]))
-		assert.NoError(t, err)
-		err = png.Encode(f, mi)
-		assert.NoError(t, err)
 	}
 
-	f, err := os.Create("withmask-all.png")
-	assert.NoError(t, err)
-	err = png.Encode(f, withMasks)
-	assert.NoError(t, err)
+	imageutils.AssertImageEqual(t, "testdata/ruedesmartyrs-expected.png", withMasks)
 }
 
 func TestGenerateAnchors(t *testing.T) {
