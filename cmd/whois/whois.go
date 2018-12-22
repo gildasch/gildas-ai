@@ -62,7 +62,11 @@ func main() {
 	}
 
 	for name, descr := range descrs {
-		score := targetDescr[0].DistanceTo(descr)
+		score, err := targetDescr[0].DistanceTo(*descr)
+		if err != nil {
+			fmt.Println("error calculating distance", err)
+			continue
+		}
 		if score < 0.4 {
 			fmt.Println(score, name)
 		}
@@ -96,13 +100,13 @@ func calculateDescriptors(extractor *faces.Extractor,
 
 		img, err := imageutils.FromFile(faceFile)
 		if err != nil {
-			fmt.Println("error processing file %s: %v\n", faceFile, err)
+			fmt.Printf("error processing file %s: %v\n", faceFile, err)
 			continue
 		}
 
 		ii, dd, err := extractor.Extract(img)
 		if err != nil {
-			fmt.Println("error extracting from %s: %v\n", faceFile, err)
+			fmt.Printf("error extracting from %s: %v\n", faceFile, err)
 			continue
 		}
 
@@ -112,7 +116,7 @@ func calculateDescriptors(extractor *faces.Extractor,
 		}
 
 		for i, d := range dd {
-			descrs[fmt.Sprintf("%s/%d", faceFile, i)] = d
+			descrs[fmt.Sprintf("%s/%d", faceFile, i)] = &d
 			saveImage(fmt.Sprintf("%s.%d", faceFile, i), ii[i])
 		}
 	}

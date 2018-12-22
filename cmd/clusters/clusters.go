@@ -55,13 +55,13 @@ func calculateDescriptors(extractor *faces.Extractor,
 
 		img, err := imageutils.FromFile(faceFile)
 		if err != nil {
-			fmt.Println("error processing file %s: %v\n", faceFile, err)
+			fmt.Printf("error processing file %s: %v\n", faceFile, err)
 			continue
 		}
 
 		ii, dd, err := extractor.Extract(img)
 		if err != nil {
-			fmt.Println("error extracting from %s: %v\n", faceFile, err)
+			fmt.Printf("error extracting from %s: %v\n", faceFile, err)
 			continue
 		}
 
@@ -71,7 +71,7 @@ func calculateDescriptors(extractor *faces.Extractor,
 		}
 
 		for i, d := range dd {
-			descrs[fmt.Sprintf("%s.%d", faceFile, i)] = d
+			descrs[fmt.Sprintf("%s.%d", faceFile, i)] = &d
 			saveImage(fmt.Sprintf("%s.%d", faceFile, i), ii[i])
 		}
 	}
@@ -94,7 +94,12 @@ descrsloop:
 	for name, descr := range descrs {
 		for i, cc := range clusters {
 			for _, c := range cc {
-				if descr.DistanceTo(descrs[c]) < threshold {
+				dist, err := descr.DistanceTo(*descrs[c])
+				if err != nil {
+					fmt.Println("error calculating distance:", err)
+					continue
+				}
+				if dist < threshold {
 					clusters[i] = append(clusters[i], name)
 					continue descrsloop
 				}

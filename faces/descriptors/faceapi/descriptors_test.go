@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/gildasch/gildas-ai/faces/descriptors"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/stretchr/testify/require"
 )
@@ -12,7 +13,7 @@ func TestDescriptors(t *testing.T) {
 	d, err := NewDescriptor()
 	require.NoError(t, err)
 
-	dd := map[string]*Descriptors{}
+	dd := map[string]descriptors.Descriptors{}
 	for _, i := range []string{"1", "2", "5", "8", "10", "11", "4-face-1-cropped"} {
 		img, err := imageutils.FromFile(fmt.Sprintf("%s.jpg", i))
 		require.NoError(t, err)
@@ -22,7 +23,8 @@ func TestDescriptors(t *testing.T) {
 
 	for a, da := range dd {
 		for b, db := range dd {
-			fmt.Printf("%s vs %s: %f\n", a, b, da.DistanceTo(db))
+			dist, err := da.DistanceTo(db)
+			fmt.Printf("%s vs %s: %f / error %v\n", a, b, dist, err)
 		}
 	}
 }

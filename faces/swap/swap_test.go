@@ -13,9 +13,9 @@ import (
 )
 
 func TestFaceSwap(t *testing.T) {
-	src, err := imageutils.FromFile("1544380116.png")
+	src, err := imageutils.FromFile("gab.png")
 	require.NoError(t, err)
-	dest, err := imageutils.FromFile("20181207_182413.jpg")
+	dest, err := imageutils.FromFile("group.jpg")
 	require.NoError(t, err)
 
 	detector, err := detection.NewDetectorFromFile("../detection/frozen_inference_graph_face.pb")
@@ -29,22 +29,22 @@ func TestFaceSwap(t *testing.T) {
 		Landmark: landmark,
 	}
 
-	out, err := FaceSwap(extractor, landmark, dest, src)
+	out, err := FaceSwap(extractor, landmark, dest, src, 0)
 	require.NoError(t, err)
 
 	gg.SavePNG("out-faceswap.png", out)
 }
 
 func TestSwap(t *testing.T) {
-	src, err := imageutils.FromFile("1544380116.png")
+	src, err := imageutils.FromFile("gab.png")
 	require.NoError(t, err)
-	dest, err := imageutils.FromFile("1544394271.png")
+	dest, err := imageutils.FromFile("syl.png")
 	require.NoError(t, err)
 
 	landmark, err := landmarks.NewLandmarkFromFile("../landmarks/landmarksnet", "myTag")
 	require.NoError(t, err)
 
-	out, err := swap(landmark, src, dest)
+	out, err := swap(landmark, src, dest, 0)
 	require.NoError(t, err)
 
 	gg.SavePNG("out-swap.png", out)

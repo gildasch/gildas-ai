@@ -2,13 +2,13 @@ package landmarks
 
 import (
 	"fmt"
+	"image"
 	"image/draw"
 	"image/jpeg"
 	"os"
 	"testing"
 
 	"github.com/gildasch/gildas-ai/faces/detection"
-	"github.com/gildasch/gildas-ai/image"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/stretchr/testify/require"
 )
