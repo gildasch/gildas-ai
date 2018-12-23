@@ -1,4 +1,4 @@
-# gildas-ai
+# gildas-ai [![Build Status](https://travis-ci.org/GildasCh/gildas-ai.svg?branch=master)](https://travis-ci.org/GildasCh/gildas-ai)
 
 Easy access to AI tasks (starting with object detection) as a web
 interface, a JSON API and the command line.
