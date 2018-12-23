@@ -1,0 +1,15 @@
+version: '2.1'
+
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/go/src/github.com/gildasch/gildas-ai
+    working_dir: /go/src/github.com/gildasch/gildas-ai
+    entrypoint: ["/bin/sh", "-c"]
+    command: >-
+      'go test -v ./...'
+
+
