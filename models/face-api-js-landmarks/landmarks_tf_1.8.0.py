@@ -101,11 +101,11 @@ params["fc"]["bias"] = load("bias.json", [136], tf.float32)
 
 def denseLayer(inp, dense, isFirstLayer=False):
   if isFirstLayer:
-    out1 = tf.math.add(
+    out1 = tf.add(
         tf.nn.conv2d(inp, dense["conv0"]["filters"], [1,2,2,1], 'SAME'),
         dense["conv0"]["bias"])
   else:
-    out1 = tf.math.add(
+    out1 = tf.add(
       tf.nn.separable_conv2d(
         inp, dense["conv0"]["depthwise_filter"], dense["conv0"]["pointwise_filter"],
         [1,2,2,1], 'SAME'),
@@ -113,27 +113,27 @@ def denseLayer(inp, dense, isFirstLayer=False):
 
   out1 = tf.nn.relu(out1)
 
-  out2 = tf.math.add(
+  out2 = tf.add(
     tf.nn.separable_conv2d(
       out1, dense["conv1"]["depthwise_filter"], dense["conv1"]["pointwise_filter"],
       [1,1,1,1], 'SAME'),
     dense["conv1"]["bias"])
 
-  out3 = tf.math.add(
+  out3 = tf.add(
     tf.nn.separable_conv2d(
-      tf.nn.relu(tf.math.add(out1, out2)),
+      tf.nn.relu(tf.add(out1, out2)),
       dense["conv2"]["depthwise_filter"], dense["conv2"]["pointwise_filter"],
       [1,1,1,1], 'SAME'),
     dense["conv2"]["bias"])
 
-  out4 = tf.math.add(
+  out4 = tf.add(
     tf.nn.separable_conv2d(
-      tf.nn.relu(tf.math.add(out1, tf.math.add(out2, out3))),
+      tf.nn.relu(tf.add(out1, tf.add(out2, out3))),
       dense["conv3"]["depthwise_filter"], dense["conv3"]["pointwise_filter"],
       [1,1,1,1], 'SAME'),
     dense["conv3"]["bias"])
 
-  return tf.nn.relu(tf.math.add(out1, tf.math.add(out2, tf.math.add(out3, out4))))
+  return tf.nn.relu(tf.add(out1, tf.add(out2, tf.add(out3, out4))))
 
 inp = tf.placeholder(tf.float32, [1,112,112,3], name='input')
 
@@ -144,7 +144,7 @@ out = denseLayer(out, params["dense3"])
 
 out = tf.nn.avg_pool(out, [1,7,7,1], [1,2,2,1], 'VALID')
 
-out = tf.math.add(
+out = tf.add(
     tf.matmul(
         tf.reshape(out, [tf.shape(out)[0], -1]),
         params["fc"]["weights"]),
