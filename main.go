@@ -30,7 +30,7 @@ func usage() {
 func main() {
 	models := map[string]*classifiers.Model{
 		"xception": &classifiers.Model{
-			ModelName:   "objects/classifiers/myModel",
+			ModelName:   "models/harshsikka-Keras-Xception/xception_tf_1.8.0",
 			TagName:     "myTag",
 			InputLayer:  "input_1",
 			OutputLayer: "predictions/Softmax",
@@ -40,7 +40,7 @@ func main() {
 			ImageWidth:  299,
 		},
 		"resnet": &classifiers.Model{
-			ModelName:   "objects/classifiers/resnet",
+			ModelName:   "models/tonyshih-Keras-ResNet50/resnet_tf_1.8.0",
 			TagName:     "myTag",
 			InputLayer:  "input_1",
 			OutputLayer: "fc1000/Softmax",
@@ -50,7 +50,7 @@ func main() {
 			ImageWidth:  224,
 		},
 		"nasnet": &classifiers.Model{
-			ModelName:   "objects/classifiers/nasnet-mobile",
+			ModelName:   "models/jbrandowski_NASNet_Mobile/nasnet-mobile_tf_1.8.0",
 			TagName:     "myTag",
 			InputLayer:  "input_1",
 			OutputLayer: "predictions/Softmax",
@@ -60,7 +60,7 @@ func main() {
 			ImageWidth:  224,
 		},
 		"pnasnet": &classifiers.Model{
-			ModelName:       "objects/classifiers/pnasnet",
+			ModelName:       "models/tfhub_imagenet_pnasnet_large_classification/pnasnet_tf_1.8.0",
 			TagName:         "myTag",
 			InputLayer:      "module/hub_input/images",
 			OutputLayer:     "module/final_layer/predictions",
@@ -77,12 +77,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	landmark, err := landmarks.NewLandmarkFromFile("faces/landmarks/landmarksnet", "myTag")
+	landmark, err := landmarks.NewLandmarkFromFile(
+		"models/face-api-js-landmarks/face-api-landmarksnet_tf_1.8.0", "myTag")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	descriptor, err := faceapi.NewDescriptorFromFile("faces/descriptors/faceapi/descriptorsnet", "myTag")
+	descriptor, err := faceapi.NewDescriptorFromFile(
+		"models/face-api-js-descriptors/face-api-descriptors_tf_1.8.0", "myTag")
 	if err != nil {
 		log.Fatal(err)
 	}
