@@ -93,7 +93,7 @@ func swap(detector LandmarkDetector, src, dest image.Image, blur float64) (image
 	}
 	distorted, err := distort.Distort(src, srcLandmarks, destLandmarksAlignedToZero)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error distorting face")
 	}
 
 	out := image.NewRGBA(dest.Bounds())

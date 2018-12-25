@@ -22,22 +22,23 @@ func Distort(img image.Image, src []image.Point, dst []image.Point) (image.Image
 
 	blob, err := toBlob(img)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error creating blob")
 	}
 
 	if err := wand.ReadImageBlob(blob); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error reading image blob of length %d", len(blob))
 	}
 
 	if err := wand.DistortImage(imagick.DISTORTION_SHEPARDS, params, false); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error executing the distortion")
 	}
 
 	wand.SetImageFormat("PNG")
+	outBlob := wand.GetImageBlob()
 
-	out, err := fromBlob(wand.GetImageBlob())
+	out, err := fromBlob(outBlob)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "error creating image.Image from out blob of length %d", len(outBlob))
 	}
 
 	return out, nil
