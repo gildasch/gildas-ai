@@ -259,13 +259,13 @@ params["conv256_down_out"]["conv2"]["scale"]["weights"] = load("conv256_down_out
 params["fc"] = load("fc.json", [256,128], tf.float32)
 
 def scale(inp, params):
-    return tf.math.add(
-        tf.math.multiply(inp, params["weights"]),
+    return tf.add(
+        tf.multiply(inp, params["weights"]),
         params["biases"])
 
 def convLayer(inp, params, strides, withRelu, padding = 'SAME'):
     out = tf.nn.conv2d(inp, params["conv"]["filters"], strides, padding)
-    out = tf.math.add(out, params["conv"]["bias"])
+    out = tf.add(out, params["conv"]["bias"])
     out = scale(out, params["scale"])
     if withRelu:
         out = tf.nn.relu(out)
@@ -283,7 +283,7 @@ def convDown(inp, params):
 def residual(inp, params):
     out = conv(inp, params["conv1"])
     out = convNoRelu(out, params["conv2"])
-    out = tf.math.add(out, inp)
+    out = tf.add(out, inp)
     out = tf.nn.relu(out)
     return out
 
@@ -296,10 +296,10 @@ def residualDown(inp, params):
     pooled = tf.nn.avg_pool(inp, [1,2,2,1], [1,2,2,1], 'VALID')
     # tf.print(tf.shape(pooled), output_stream=sys.stdout)
     zeros = tf.zeros(tf.shape(pooled), tf.float32)
-    isPad = tf.math.equal(tf.shape(pooled)[3], tf.shape(out)[3])
-    isAdjustShape = tf.math.logical_or(
-        tf.math.equal(tf.shape(pooled)[1], tf.shape(out)[1]),
-        tf.math.equal(tf.shape(pooled)[2], tf.shape(out)[2]))
+    isPad = tf.equal(tf.shape(pooled)[3], tf.shape(out)[3])
+    isAdjustShape = tf.logical_or(
+        tf.equal(tf.shape(pooled)[1], tf.shape(out)[1]),
+        tf.equal(tf.shape(pooled)[2], tf.shape(out)[2]))
 
     def adjustShape(out):
         outShape = tf.shape(out)
@@ -322,7 +322,7 @@ def residualDown(inp, params):
 
     pooled = tf.cond(isPad, false_fn=lambda: pad(pooled), true_fn=lambda: pooled)
 
-    out = tf.math.add(pooled, out)
+    out = tf.add(pooled, out)
     # tf.print(tf.shape(out), output_stream=sys.stdout)
     out = tf.nn.relu(out)
     return out
@@ -350,8 +350,8 @@ out = residual(out, params["conv256_1"])
 out = residual(out, params["conv256_2"])
 out = residualDown(out, params["conv256_down_out"])
 
-globalAvg = tf.math.reduce_mean(out, [1,2])
-out = tf.linalg.matmul(globalAvg, params["fc"], name='output')
+globalAvg = tf.reduce_mean(out, [1,2])
+out = tf.matmul(globalAvg, params["fc"], name='output')
 
 if len(sys.argv[1:]) > 0:
     modelName = sys.argv[1]
