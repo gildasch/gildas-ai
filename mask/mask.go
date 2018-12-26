@@ -90,7 +90,7 @@ func (m *Masks) DrawMasks(detections *Detections, img image.Image) image.Image {
 func labelImage(label string, x, y float64, bounds image.Rectangle) image.Image {
 	ctx := gg.NewContext(bounds.Dx(), bounds.Dy())
 	ctx.SetHexColor("#FFF")
-	ctx.LoadFontFace("LiberationSans-Regular.ttf", 24)
+	ctx.LoadFontFace("static/LiberationSans-Regular.ttf", 24)
 	ctx.DrawString(label, x*float64(bounds.Dx()), y*float64(bounds.Dy()))
 	return ctx.Image()
 }

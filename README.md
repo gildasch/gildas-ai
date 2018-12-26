@@ -3,9 +3,9 @@
 Easy access to AI tasks (starting with object detection) as a web
 interface, a JSON API and the command line.
 
-![wine](wine.png)
+![wine](static/wine.png)
 
-![faces](faces.png)
+![faces](static/faces_wide.png)
 
 ![faceswap](static/faceswap.jpg)
 
