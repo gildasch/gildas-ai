@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -115,11 +116,15 @@ func main() {
 		app := gin.Default()
 		app.Static("/static", "./static")
 		app.LoadHTMLFiles(
+			"templates/index.html",
 			"templates/predictions.html",
 			"templates/faces.html",
 			"templates/photos.html",
 			"templates/faceswap.html",
 			"templates/masks.html")
+		app.GET("/", func(c *gin.Context) {
+			c.HTML(http.StatusOK, "index.html", nil)
+		})
 		app.GET("/object/api", api.ClassifyHandler(classifiers, false))
 		app.GET("/object", api.ClassifyHandler(classifiers, true))
 
