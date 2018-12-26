@@ -17,7 +17,20 @@ RUN go get github.com/gin-gonic/gin && \
     go get github.com/stretchr/testify/require
 
 COPY . /go/src/github.com/gildasch/gildas-ai
-
 WORKDIR /go/src/github.com/gildasch/gildas-ai
+
+RUN wget https://github.com/GildasCh/gildas-ai/releases/download/v1.0/face-api-js-landmarks-face-api-landmarksnet_tf_1.8.0.zip && \
+    wget https://github.com/GildasCh/gildas-ai/releases/download/v1.0/face-api-js-descriptors-face-api-descriptors_tf_1.8.0.zip && \
+    wget https://github.com/GildasCh/gildas-ai/releases/download/v1.0/harshsikka-Keras-Xception-xception_tf_1.8.0.zip && \
+    wget https://github.com/GildasCh/gildas-ai/releases/download/v1.0/tonyshih-Keras-ResNet50-resnet_tf_1.8.0.zip && \
+    wget https://github.com/GildasCh/gildas-ai/releases/download/v1.0/jbrandowski_NASNet_Mobile-nasnet-mobile_tf_1.8.0.zip && \
+    wget https://github.com/GildasCh/gildas-ai/releases/download/v1.0/tfhub_imagenet_pnasnet_large_classification-pnasnet_tf_1.8.0.zip && \
+    unzip -x face-api-js-landmarks-face-api-landmarksnet_tf_1.8.0.zip && \
+    unzip -x face-api-js-descriptors-face-api-descriptors_tf_1.8.0.zip && \
+    unzip -x harshsikka-Keras-Xception-xception_tf_1.8.0.zip && \
+    unzip -x tonyshih-Keras-ResNet50-resnet_tf_1.8.0.zip && \
+    unzip -x jbrandowski_NASNet_Mobile-nasnet-mobile_tf_1.8.0.zip && \
+    unzip -x tfhub_imagenet_pnasnet_large_classification-pnasnet_tf_1.8.0.zip
+
 ENTRYPOINT ["go", "run", "main.go"]
 CMD ["web"]
