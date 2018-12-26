@@ -1,4 +1,9 @@
-# gildas-ai [![Build Status](https://travis-ci.org/GildasCh/gildas-ai.svg?branch=master)](https://travis-ci.org/GildasCh/gildas-ai)
+# gildas-ai 
+
+[![GoDoc](https://godoc.org/github.com/gildasch/gildas-ai?status.svg)](https://godoc.org/github.com/gildasch/gildas-ai)
+[![Build Status](https://travis-ci.org/GildasCh/gildas-ai.svg?branch=master)](https://travis-ci.org/GildasCh/gildas-ai)
+[![Coverage Status](https://coveralls.io/repos/github/GildasCh/gildas-ai/badge.svg?branch=master)](https://coveralls.io/github/GildasCh/gildas-ai?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/GildasCh/gildas-ai)](https://goreportcard.com/report/github.com/GildasCh/gildas-ai)
 
 Easy access to AI tasks (starting with object detection) as a web
 interface, a JSON API and the command line.
