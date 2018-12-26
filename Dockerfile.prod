@@ -38,5 +38,5 @@ ENV MODELS_ROOT /models/
 COPY . /go/src/github.com/gildasch/gildas-ai
 WORKDIR /go/src/github.com/gildasch/gildas-ai
 
-ENTRYPOINT ["go", "run", "main.go"]
+ENTRYPOINT ["go", "run", "cmd/gildas-ai/main.go"]
 CMD ["web"]

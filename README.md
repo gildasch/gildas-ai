@@ -19,7 +19,7 @@ interface, a JSON API and the command line.
 With Tensorflow and the Go bindings installed, run it with:
 
 ```
-go run main.go web
+go run cmd/gildas-ai/main.go web
 ```
 
 Using Docker:
