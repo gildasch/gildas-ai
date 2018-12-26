@@ -12,4 +12,16 @@ services:
     command: >-
       'go test -v ./...'
 
+  gildas-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    ports:
+      - 9850:8080
+    network_mode: bridge
+    restart: always
 
+networks:
+  default:
+    external:
+      name: bridge
