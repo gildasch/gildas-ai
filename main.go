@@ -29,9 +29,11 @@ func usage() {
 }
 
 func main() {
+	modelsRoot := os.Getenv("MODELS_ROOT")
+
 	models := map[string]*classifiers.Model{
 		"xception": &classifiers.Model{
-			ModelName:   "models/harshsikka-Keras-Xception/xception_tf_1.8.0",
+			ModelName:   modelsRoot + "models/harshsikka-Keras-Xception/xception_tf_1.8.0",
 			TagName:     "myTag",
 			InputLayer:  "input_1",
 			OutputLayer: "predictions/Softmax",
@@ -41,7 +43,7 @@ func main() {
 			ImageWidth:  299,
 		},
 		"resnet": &classifiers.Model{
-			ModelName:   "models/tonyshih-Keras-ResNet50/resnet_tf_1.8.0",
+			ModelName:   modelsRoot + "models/tonyshih-Keras-ResNet50/resnet_tf_1.8.0",
 			TagName:     "myTag",
 			InputLayer:  "input_1",
 			OutputLayer: "fc1000/Softmax",
@@ -51,7 +53,7 @@ func main() {
 			ImageWidth:  224,
 		},
 		"nasnet": &classifiers.Model{
-			ModelName:   "models/jbrandowski_NASNet_Mobile/nasnet-mobile_tf_1.8.0",
+			ModelName:   modelsRoot + "models/jbrandowski_NASNet_Mobile/nasnet-mobile_tf_1.8.0",
 			TagName:     "myTag",
 			InputLayer:  "input_1",
 			OutputLayer: "predictions/Softmax",
@@ -61,7 +63,7 @@ func main() {
 			ImageWidth:  224,
 		},
 		"pnasnet": &classifiers.Model{
-			ModelName:       "models/tfhub_imagenet_pnasnet_large_classification/pnasnet_tf_1.8.0",
+			ModelName:       modelsRoot + "models/tfhub_imagenet_pnasnet_large_classification/pnasnet_tf_1.8.0",
 			TagName:         "myTag",
 			InputLayer:      "module/hub_input/images",
 			OutputLayer:     "module/final_layer/predictions",
@@ -73,19 +75,19 @@ func main() {
 		},
 	}
 
-	detector, err := detection.NewDetectorFromFile("faces/detection/frozen_inference_graph_face.pb")
+	detector, err := detection.NewDetectorFromFile(modelsRoot + "faces/detection/frozen_inference_graph_face.pb")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	landmark, err := landmarks.NewLandmarkFromFile(
-		"models/face-api-js-landmarks/face-api-landmarksnet_tf_1.8.0", "myTag")
+		modelsRoot+"models/face-api-js-landmarks/face-api-landmarksnet_tf_1.8.0", "myTag")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	descriptor, err := faceapi.NewDescriptorFromFile(
-		"models/face-api-js-descriptors/face-api-descriptors_tf_1.8.0", "myTag")
+		modelsRoot+"models/face-api-js-descriptors/face-api-descriptors_tf_1.8.0", "myTag")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -141,7 +143,7 @@ func main() {
 		store := persistence.NewInMemoryStore(365 * 24 * time.Hour)
 		app.GET("/faceswap", cache.CachePage(store, 12*time.Hour, api.FaceSwapHandler(extractor, landmark)))
 
-		maskDetector, err := mask.NewRCNN("mask/mask_rcnn_coco_tf_1.8.0", "myTag")
+		maskDetector, err := mask.NewRCNN(modelsRoot+"mask/mask_rcnn_coco_tf_1.8.0", "myTag")
 		if err != nil {
 			log.Fatal(err)
 		}
