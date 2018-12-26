@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+	"os"
 	"testing"
 
 	"github.com/gildasch/gildas-ai/imageutils"
@@ -11,8 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var modelsRoot = os.Getenv("MODELS_ROOT")
+
 func TestRunRCNN(t *testing.T) {
-	r, err := NewRCNN("mask_rcnn_coco", "myTag")
+	r, err := NewRCNN(modelsRoot+"mask/mask_rcnn_coco", "myTag")
 	require.NoError(t, err)
 
 	img, err := imageutils.FromFile("testdata/ruedesmartyrs.jpg")
