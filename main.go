@@ -75,7 +75,7 @@ func main() {
 		},
 	}
 
-	detector, err := detection.NewDetectorFromFile(modelsRoot + "faces/detection/frozen_inference_graph_face.pb")
+	detector, err := detection.NewDetectorFromFile("faces/detection/frozen_inference_graph_face.pb")
 	if err != nil {
 		log.Fatal(err)
 	}
