@@ -7,9 +7,9 @@ interface, a JSON API and the command line.
 
 ![faces](faces.png)
 
-![drake](drake.png)
+![faceswap](static/faceswap.jpg)
 
-![sport car](sportcar.png)
+![masks](static/masks.jpg)
 
 With Tensorflow and the Go bindings installed, run it with:
 
