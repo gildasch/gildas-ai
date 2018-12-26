@@ -18,6 +18,7 @@ RUN go get github.com/gin-gonic/gin && \
 
 RUN mkdir /models && cd /models && \
     wget --quiet https://github.com/GildasCh/gildas-ai/releases/download/v1.0/mask_rcnn_coco_tf_1.12.0.zip && \
-    unzip -x mask_rcnn_coco_tf_1.12.0.zip
+    unzip -x mask_rcnn_coco_tf_1.12.0.zip && \
+    rm *.zip
 
 ENV MODELS_ROOT /models/

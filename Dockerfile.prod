@@ -30,7 +30,8 @@ RUN mkdir /models && cd /models && \
     unzip -x tonyshih-Keras-ResNet50-resnet_tf_1.8.0.zip && \
     unzip -x jbrandowski_NASNet_Mobile-nasnet-mobile_tf_1.8.0.zip && \
     unzip -x tfhub_imagenet_pnasnet_large_classification-pnasnet_tf_1.8.0.zip && \
-    unzip -x mask_rcnn_coco_tf_1.8.0.zip
+    unzip -x mask_rcnn_coco_tf_1.8.0.zip && \
+    rm *.zip
 
 ENV MODELS_ROOT /models/
 
