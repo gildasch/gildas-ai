@@ -25,12 +25,14 @@ RUN wget --quiet https://github.com/GildasCh/gildas-ai/releases/download/v1.0/fa
     wget --quiet https://github.com/GildasCh/gildas-ai/releases/download/v1.0/tonyshih-Keras-ResNet50-resnet_tf_1.8.0.zip && \
     wget --quiet https://github.com/GildasCh/gildas-ai/releases/download/v1.0/jbrandowski_NASNet_Mobile-nasnet-mobile_tf_1.8.0.zip && \
     wget --quiet https://github.com/GildasCh/gildas-ai/releases/download/v1.0/tfhub_imagenet_pnasnet_large_classification-pnasnet_tf_1.8.0.zip && \
+    wget --quiet https://github.com/GildasCh/gildas-ai/releases/download/v1.0/mask_rcnn_coco_tf_1.8.0.zip && \
     unzip -x face-api-js-landmarks-face-api-landmarksnet_tf_1.8.0.zip && \
     unzip -x face-api-js-descriptors-face-api-descriptors_tf_1.8.0.zip && \
     unzip -x harshsikka-Keras-Xception-xception_tf_1.8.0.zip && \
     unzip -x tonyshih-Keras-ResNet50-resnet_tf_1.8.0.zip && \
     unzip -x jbrandowski_NASNet_Mobile-nasnet-mobile_tf_1.8.0.zip && \
-    unzip -x tfhub_imagenet_pnasnet_large_classification-pnasnet_tf_1.8.0.zip
+    unzip -x tfhub_imagenet_pnasnet_large_classification-pnasnet_tf_1.8.0.zip && \
+    unzip -x mask_rcnn_coco_tf_1.8.0.zip
 
 ENTRYPOINT ["go", "run", "main.go"]
 CMD ["web"]
