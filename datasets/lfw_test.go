@@ -23,7 +23,7 @@ const (
 )
 
 func TestExtractionOnLFW(t *testing.T) {
-	extractor, err := faceapi.NewDefaultExtractor("../../faceapi")
+	extractor, err := faceapi.NewDefaultExtractor("../faceapi")
 	require.NoError(t, err)
 
 	descrs, err := extract(extractor, "")

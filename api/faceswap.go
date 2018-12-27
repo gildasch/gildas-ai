@@ -14,13 +14,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gildasch/gildas-ai/faces/swap"
+	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/gildasch/gildas-ai/imageutils/gifutils"
 	"github.com/gin-gonic/gin"
 )
 
-func FaceSwapHandler(extractor swap.Extractor, detector swap.LandmarkDetector) gin.HandlerFunc {
+func FaceSwapHandler(extractor *gildasai.Extractor, detector gildasai.Landmark) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		srcURL := strings.TrimPrefix(c.Query("src"), "/")
 		dstURL := strings.TrimPrefix(c.Query("dst"), "/")
@@ -66,7 +66,7 @@ func FaceSwapHandler(extractor swap.Extractor, detector swap.LandmarkDetector) g
 				if blur == 0 {
 					blur = 0.7
 				}
-				out, err := swap.FaceSwap(extractor, detector, dst, src, blur)
+				out, err := gildasai.FaceSwap(extractor, detector, dst, src, blur)
 				if err != nil {
 					continue
 				}
@@ -93,7 +93,7 @@ func FaceSwapHandler(extractor swap.Extractor, detector swap.LandmarkDetector) g
 			return
 		}
 
-		out, err := swap.FaceSwap(extractor, detector, dst, src, blur)
+		out, err := gildasai.FaceSwap(extractor, detector, dst, src, blur)
 		if err != nil {
 			c.AbortWithStatusJSON(
 				http.StatusBadRequest,
