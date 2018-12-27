@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gildasch/gildas-ai/objects"
+	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/objects/listing"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
@@ -110,10 +110,10 @@ limit 1`, filename)
 	return rows.Next(), nil
 }
 
-func extractPredictions(labelList string) []objects.Prediction {
+func extractPredictions(labelList string) []gildasai.Prediction {
 	splitted := strings.Split(labelList, ";")
 
-	var predictions []objects.Prediction
+	var predictions []gildasai.Prediction
 	for _, p := range splitted {
 		labelAndScore := strings.Split(p, ":")
 		if len(labelAndScore) != 2 {
@@ -126,7 +126,7 @@ func extractPredictions(labelList string) []objects.Prediction {
 			continue
 		}
 
-		predictions = append(predictions, objects.Prediction{
+		predictions = append(predictions, gildasai.Prediction{
 			Label: label,
 			Score: float32(score),
 		})

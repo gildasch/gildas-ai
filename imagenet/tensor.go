@@ -1,18 +1,17 @@
-package classifiers
+package imagenet
 
 import (
 	"image"
 
+	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/imageutils"
-	"github.com/gildasch/gildas-ai/objects"
-	"github.com/gildasch/gildas-ai/objects/labels"
 	"github.com/pkg/errors"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 )
 
 type Model struct {
 	model  *tf.SavedModel
-	labels labels.Labels
+	labels Labels
 
 	ModelName, TagName      string
 	InputLayer, OutputLayer string
@@ -24,7 +23,7 @@ type Model struct {
 
 func (m *Model) Load() (func() error, error) {
 	if m.Labels != "" {
-		l, err := labels.FromFile(m.Labels, m.IndexCorrection)
+		l, err := LabelsFromFile(m.Labels, m.IndexCorrection)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to read labels from file %q", m.Labels)
 		}
@@ -42,7 +41,7 @@ func (m *Model) Load() (func() error, error) {
 	return model.Session.Close, nil
 }
 
-func (m *Model) Inception(img image.Image) (*objects.Predictions, error) {
+func (m *Model) Classify(img image.Image) (gildasai.Predictions, error) {
 	img = imageutils.Scaled(img, m.ImageHeight, m.ImageWidth)
 
 	tensor, err := imageToTensor(img, m.ImageMode, m.ImageHeight, m.ImageWidth)
@@ -76,9 +75,16 @@ func (m *Model) Inception(img image.Image) (*objects.Predictions, error) {
 		return nil, errors.New("predictions are empty")
 	}
 
-	return &objects.Predictions{
-		Scores: res[0],
-		Labels: m.labels}, nil
+	preds := gildasai.Predictions{}
+
+	for i, r := range res[0] {
+		preds = append(preds, gildasai.Prediction{
+			Score: r,
+			Label: m.labels.Get(i),
+		})
+	}
+
+	return preds, nil
 }
 
 const (

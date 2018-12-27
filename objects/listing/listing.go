@@ -1,6 +1,6 @@
 package listing
 
-import "github.com/gildasch/gildas-ai/objects"
+import gildasai "github.com/gildasch/gildas-ai"
 
 type Listing struct {
 	Store Store
@@ -8,7 +8,7 @@ type Listing struct {
 
 type Item struct {
 	Filename    string
-	Predictions []objects.Prediction
+	Predictions []gildasai.Prediction
 }
 
 type Store interface {

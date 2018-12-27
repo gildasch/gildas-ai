@@ -9,14 +9,15 @@ import (
 	"strings"
 	"time"
 
+	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/api"
 	"github.com/gildasch/gildas-ai/faces"
 	"github.com/gildasch/gildas-ai/faces/descriptors/faceapi"
 	"github.com/gildasch/gildas-ai/faces/detection"
 	"github.com/gildasch/gildas-ai/faces/landmarks"
+	"github.com/gildasch/gildas-ai/imagenet"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/gildasch/gildas-ai/mask"
-	"github.com/gildasch/gildas-ai/objects/classifiers"
 	"github.com/gildasch/gildas-ai/objects/listing/stores/sqlite"
 	"github.com/gin-contrib/cache"
 	"github.com/gin-contrib/cache/persistence"
@@ -31,44 +32,44 @@ func usage() {
 func main() {
 	modelsRoot := os.Getenv("MODELS_ROOT")
 
-	models := map[string]*classifiers.Model{
-		"xception": &classifiers.Model{
+	models := map[string]*imagenet.Model{
+		"xception": &imagenet.Model{
 			ModelName:   modelsRoot + "models/harshsikka-Keras-Xception/xception_tf_1.8.0",
 			TagName:     "myTag",
 			InputLayer:  "input_1",
 			OutputLayer: "predictions/Softmax",
-			ImageMode:   classifiers.ImageModeTensorflow,
-			Labels:      "objects/labels/imagenet_class_index.json",
+			ImageMode:   imagenet.ImageModeTensorflow,
+			Labels:      "imagenet/imagenet_class_index.json",
 			ImageHeight: 299,
 			ImageWidth:  299,
 		},
-		"resnet": &classifiers.Model{
+		"resnet": &imagenet.Model{
 			ModelName:   modelsRoot + "models/tonyshih-Keras-ResNet50/resnet_tf_1.8.0",
 			TagName:     "myTag",
 			InputLayer:  "input_1",
 			OutputLayer: "fc1000/Softmax",
-			ImageMode:   classifiers.ImageModeCaffe,
-			Labels:      "objects/labels/imagenet_class_index.json",
+			ImageMode:   imagenet.ImageModeCaffe,
+			Labels:      "imagenet/imagenet_class_index.json",
 			ImageHeight: 224,
 			ImageWidth:  224,
 		},
-		"nasnet": &classifiers.Model{
+		"nasnet": &imagenet.Model{
 			ModelName:   modelsRoot + "models/jbrandowski_NASNet_Mobile/nasnet-mobile_tf_1.8.0",
 			TagName:     "myTag",
 			InputLayer:  "input_1",
 			OutputLayer: "predictions/Softmax",
-			ImageMode:   classifiers.ImageModeTensorflow,
-			Labels:      "objects/labels/imagenet_class_index.json",
+			ImageMode:   imagenet.ImageModeTensorflow,
+			Labels:      "imagenet/imagenet_class_index.json",
 			ImageHeight: 224,
 			ImageWidth:  224,
 		},
-		"pnasnet": &classifiers.Model{
+		"pnasnet": &imagenet.Model{
 			ModelName:       modelsRoot + "models/tfhub_imagenet_pnasnet_large_classification/pnasnet_tf_1.8.0",
 			TagName:         "myTag",
 			InputLayer:      "module/hub_input/images",
 			OutputLayer:     "module/final_layer/predictions",
-			ImageMode:       classifiers.ImageModeTensorflowPositive,
-			Labels:          "objects/labels/imagenet_class_index.json",
+			ImageMode:       imagenet.ImageModeTensorflowPositive,
+			Labels:          "imagenet/imagenet_class_index.json",
 			ImageHeight:     331,
 			ImageWidth:      331,
 			IndexCorrection: -1,
@@ -93,7 +94,7 @@ func main() {
 	}
 
 	if len(os.Args) >= 2 && os.Args[1] == "web" {
-		classifiers := map[string]api.Classifier{}
+		classifiers := map[string]gildasai.Classifier{}
 		for name, m := range models {
 			close, err := m.Load()
 			if err != nil {
@@ -188,7 +189,7 @@ func main() {
 		}
 	}
 
-	preds, err := model.Inception(img)
+	preds, err := model.Classify(img)
 	if err != nil {
 		fmt.Printf("there was an error while running the inception: %v\n", err)
 		return

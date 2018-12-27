@@ -1,4 +1,4 @@
-package labels
+package imagenet
 
 import (
 	"encoding/json"
@@ -14,7 +14,7 @@ type LabelItem struct {
 	Name, Description string
 }
 
-func FromFile(jsonFile string, indexCorrection int) (Labels, error) {
+func LabelsFromFile(jsonFile string, indexCorrection int) (Labels, error) {
 	j, err := ioutil.ReadFile(jsonFile)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read file %q", jsonFile)

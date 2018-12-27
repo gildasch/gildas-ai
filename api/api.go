@@ -2,28 +2,23 @@ package api
 
 import (
 	"fmt"
-	"image"
 	"net/http"
 	"strings"
 	"time"
 
+	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/imageutils"
-	"github.com/gildasch/gildas-ai/objects"
 	"github.com/gin-gonic/gin"
 )
 
-type Classifier interface {
-	Inception(img image.Image) (*objects.Predictions, error)
-}
-
 type classifierResult struct {
 	Classifier  string               `json:"classifier"`
-	Predictions []objects.Prediction `json:"predictions,omitempty"`
+	Predictions gildasai.Predictions `json:"predictions,omitempty"`
 	Timing      string               `json:"timing"`
 	Error       error                `json:"error"`
 }
 
-func ClassifyHandler(classifiers map[string]Classifier, html bool) gin.HandlerFunc {
+func ClassifyHandler(classifiers map[string]gildasai.Classifier, html bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		imageURL := strings.TrimPrefix(c.Query("imageurl"), "/")
 
@@ -44,7 +39,7 @@ func ClassifyHandler(classifiers map[string]Classifier, html bool) gin.HandlerFu
 
 		for name, c := range classifiers {
 			start := time.Now()
-			preds, err := c.Inception(img)
+			preds, err := c.Classify(img)
 			if err != nil {
 				resp = append(resp, classifierResult{
 					Classifier: name,
