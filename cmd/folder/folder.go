@@ -3,16 +3,15 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"image"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
+	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/cmd/folder/cache/sqlite"
+	"github.com/gildasch/gildas-ai/imagenet"
 	"github.com/gildasch/gildas-ai/imageutils"
-	"github.com/gildasch/gildas-ai/objects"
-	"github.com/gildasch/gildas-ai/objects/classifiers"
 	"github.com/pkg/errors"
 )
 
@@ -26,12 +25,8 @@ func usage() {
 	fmt.Printf("%s [model-root-folder] [image-folder]\n", os.Args[0])
 }
 
-type Classifier interface {
-	Inception(img image.Image) (*objects.Predictions, error)
-}
-
 type Cache interface {
-	Inception(file, network string, inception func() ([]objects.Prediction, error)) ([]objects.Prediction, error)
+	Inception(file, network string, inception func() ([]gildasai.Prediction, error)) ([]gildasai.Prediction, error)
 }
 
 func main() {
@@ -43,14 +38,14 @@ func main() {
 	modelRootFolder := strings.TrimSuffix(os.Args[1], "/")
 	imageFolder := strings.TrimSuffix(os.Args[2], "/")
 
-	var classifier Classifier
+	var classifier gildasai.Classifier
 	if !onlyFromCache {
-		pnasnet := &classifiers.Model{
+		pnasnet := &imagenet.Model{
 			ModelName:       modelRootFolder + "/pnasnet",
 			TagName:         "myTag",
 			InputLayer:      "module/hub_input/images",
 			OutputLayer:     "module/final_layer/predictions",
-			ImageMode:       classifiers.ImageModeTensorflowPositive,
+			ImageMode:       imagenet.ImageModeTensorflowPositive,
 			Labels:          modelRootFolder + "/../labels/imagenet_class_index.json",
 			ImageHeight:     331,
 			ImageWidth:      331,
@@ -95,7 +90,7 @@ func main() {
 	}
 }
 
-func inspectFolder(cache Cache, classifier Classifier, folder string) (map[string][]string, error) {
+func inspectFolder(cache Cache, classifier gildasai.Classifier, folder string) (map[string][]string, error) {
 	if cache == nil && classifier == nil {
 		return nil, errors.New("cannot inspect without cache or classifier")
 	}
@@ -115,10 +110,10 @@ func inspectFolder(cache Cache, classifier Classifier, folder string) (map[strin
 			continue
 		}
 
-		var inception func() ([]objects.Prediction, error)
+		var inception func() ([]gildasai.Prediction, error)
 		if classifier != nil {
-			inception = func() ([]objects.Prediction, error) {
-				predictions, err := classifier.Inception(img)
+			inception = func() ([]gildasai.Prediction, error) {
+				predictions, err := classifier.Classify(img)
 				if err != nil {
 					return nil, errors.Wrapf(err, "error executing inception on %s", file)
 				}
@@ -126,12 +121,12 @@ func inspectFolder(cache Cache, classifier Classifier, folder string) (map[strin
 				return predictions.Best(10), nil
 			}
 		} else {
-			inception = func() ([]objects.Prediction, error) {
+			inception = func() ([]gildasai.Prediction, error) {
 				return nil, errors.New("no classifier given")
 			}
 		}
 
-		var preds []objects.Prediction
+		var preds []gildasai.Prediction
 		if cache != nil {
 			preds, err = cache.Inception(file, "pnasnet", inception)
 			if err != nil {
