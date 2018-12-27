@@ -1,10 +1,8 @@
-package faces
+package gildasai
 
 import (
 	"fmt"
 	"image"
-
-	"github.com/gildasch/gildas-ai/faces/descriptors"
 )
 
 type Batch struct {
@@ -19,7 +17,7 @@ type BatchItem struct {
 	Name        string
 	Source      image.Image
 	Cropped     image.Image
-	Descriptors descriptors.Descriptors
+	Descriptors Descriptors
 }
 
 type BatchError struct {

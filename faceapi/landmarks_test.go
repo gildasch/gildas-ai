@@ -1,4 +1,4 @@
-package landmarks
+package faceapi
 
 import (
 	"fmt"
@@ -6,12 +6,12 @@ import (
 	"image/draw"
 	"testing"
 
-	"github.com/gildasch/gildas-ai/faces/detection"
+	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/stretchr/testify/require"
 )
 
-func TestDetection(t *testing.T) {
+func TestLandmarksDetection(t *testing.T) {
 	l, err := NewLandmark()
 	require.NoError(t, err)
 
@@ -28,21 +28,21 @@ func TestDetection(t *testing.T) {
 }
 
 func TestFullImage(t *testing.T) {
-	testImage, err := imageutils.FromFile("../pictures/2.jpg")
+	testImage, err := imageutils.FromFile("pictures/2.jpg")
 	require.NoError(t, err)
 
-	detector, err := detection.NewDetectorFromFile("../detection/frozen_inference_graph_face.pb")
+	detector, err := NewDetectorFromFile("frozen_inference_graph_face.pb")
 	require.NoError(t, err)
 
 	dets, err := detector.Detect(testImage)
 	require.NoError(t, err)
 
-	actual := dets.Above(0.5)
+	actual := gildasai.Above(dets, 0.5)
 
 	boxes := []image.Image{}
-	for _, box := range actual.Boxes {
-		out := image.NewRGBA(box)
-		draw.Draw(out, box, testImage, box.Min, draw.Src)
+	for _, d := range actual {
+		out := image.NewRGBA(d.Box)
+		draw.Draw(out, d.Box, testImage, d.Box.Min, draw.Src)
 		boxes = append(boxes, out)
 	}
 

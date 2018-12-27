@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gildasch/gildas-ai/faces"
-	"github.com/gildasch/gildas-ai/faces/descriptors"
+	gildasai "github.com/gildasch/gildas-ai"
+	"github.com/gildasch/gildas-ai/faceapi"
 	"github.com/gildasch/gildas-ai/imageutils"
 )
 
@@ -34,7 +34,7 @@ func main() {
 		noCalculation = true
 	}
 
-	extractor, err := faces.NewDefaultExtractor(modelRootFolder)
+	extractor, err := faceapi.NewDefaultExtractor(modelRootFolder)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -73,8 +73,8 @@ func main() {
 	}
 }
 
-func calculateDescriptors(extractor *faces.Extractor,
-	facesFolder string, noCalculation bool) (map[string]*descriptors.Descriptors, error) {
+func calculateDescriptors(extractor *gildasai.Extractor,
+	facesFolder string, noCalculation bool) (map[string]*gildasai.Descriptors, error) {
 	faceFiles, err := filepath.Glob(strings.TrimSuffix(facesFolder, "/") + "/*")
 	if err != nil {
 		return nil, err
@@ -126,21 +126,21 @@ func calculateDescriptors(extractor *faces.Extractor,
 	return descrs, nil
 }
 
-func preCalculatedOrNew(facesFolder string) map[string]*descriptors.Descriptors {
+func preCalculatedOrNew(facesFolder string) map[string]*gildasai.Descriptors {
 	ds := preCalculated(facesFolder)
 	if ds != nil {
 		return ds
 	}
-	return map[string]*descriptors.Descriptors{}
+	return map[string]*gildasai.Descriptors{}
 }
 
-func preCalculated(facesFolder string) map[string]*descriptors.Descriptors {
+func preCalculated(facesFolder string) map[string]*gildasai.Descriptors {
 	f, err := os.Open(strings.TrimSuffix(facesFolder, "/") + "/precalculated.json")
 	if err != nil {
 		return nil
 	}
 
-	var descrs map[string]*descriptors.Descriptors
+	var descrs map[string]*gildasai.Descriptors
 	err = json.NewDecoder(f).Decode(&descrs)
 	if err != nil {
 		return nil
@@ -149,7 +149,7 @@ func preCalculated(facesFolder string) map[string]*descriptors.Descriptors {
 	return descrs
 }
 
-func savePreCalculated(facesFolder string, descrs map[string]*descriptors.Descriptors) {
+func savePreCalculated(facesFolder string, descrs map[string]*gildasai.Descriptors) {
 	f, err := os.Create(strings.TrimSuffix(facesFolder, "/") + "/precalculated.json")
 	if err != nil {
 		return

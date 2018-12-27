@@ -9,21 +9,21 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gildasch/gildas-ai/faces"
+	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/gin-gonic/gin"
 	"github.com/nfnt/resize"
 	uuid "github.com/satori/go.uuid"
 )
 
-func FacesHomeHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
+func FacesHomeHandler(batches map[string]*gildasai.Batch) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.HTML(http.StatusOK, "faces.html", gin.H{})
 		return
 	}
 }
 
-func FacesPostBatchHandler(extractor *faces.Extractor, batches map[string]*faces.Batch) gin.HandlerFunc {
+func FacesPostBatchHandler(extractor *gildasai.Extractor, batches map[string]*gildasai.Batch) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		fileHeader, err := c.FormFile("image_zip")
 		if err != nil {
@@ -48,7 +48,7 @@ func FacesPostBatchHandler(extractor *faces.Extractor, batches map[string]*faces
 			return
 		}
 
-		batch := &faces.Batch{}
+		batch := &gildasai.Batch{}
 		batch = batch.Process(extractor, images)
 		id, _ := uuid.NewV4()
 		batches[id.String()] = batch
@@ -57,7 +57,7 @@ func FacesPostBatchHandler(extractor *faces.Extractor, batches map[string]*faces
 	}
 }
 
-func FacesGetBatchHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
+func FacesGetBatchHandler(batches map[string]*gildasai.Batch) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("batchID")
 
@@ -140,7 +140,7 @@ func (f *faceCluster) Distance(i, j int) float32 {
 	return 1000 * f.distances[i][j]
 }
 
-func FaceSourceHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
+func FaceSourceHandler(batches map[string]*gildasai.Batch) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		batchID := c.Param("batchID")
 		name := c.Param("name")
@@ -160,7 +160,7 @@ func FaceSourceHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
 	}
 }
 
-func FaceCroppedHandler(batches map[string]*faces.Batch) gin.HandlerFunc {
+func FaceCroppedHandler(batches map[string]*gildasai.Batch) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		batchID := c.Param("batchID")
 		name := c.Param("name")

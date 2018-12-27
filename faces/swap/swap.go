@@ -9,7 +9,7 @@ import (
 
 	"github.com/disintegration/imaging"
 	"github.com/fogleman/gg"
-	"github.com/gildasch/gildas-ai/faces/landmarks"
+	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/imageutils/distort"
 	colorful "github.com/lucasb-eyer/go-colorful"
 	"github.com/nfnt/resize"
@@ -21,7 +21,7 @@ type Extractor interface {
 }
 
 type LandmarkDetector interface {
-	Detect(img image.Image) (*landmarks.Landmarks, error)
+	Detect(img image.Image) (*gildasai.Landmarks, error)
 }
 
 func FaceSwap(extractor Extractor, detector LandmarkDetector, dest, src image.Image, blur float64) (image.Image, error) {

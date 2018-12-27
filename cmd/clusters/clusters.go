@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gildasch/gildas-ai/faces"
-	"github.com/gildasch/gildas-ai/faces/descriptors"
+	gildasai "github.com/gildasch/gildas-ai"
+	"github.com/gildasch/gildas-ai/faceapi"
 	"github.com/gildasch/gildas-ai/imageutils"
 )
 
@@ -27,7 +27,7 @@ func main() {
 	modelRootFolder := os.Args[1]
 	facesFolder := os.Args[2]
 
-	extractor, err := faces.NewDefaultExtractor(modelRootFolder)
+	extractor, err := faceapi.NewDefaultExtractor(modelRootFolder)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -42,14 +42,14 @@ func main() {
 	fmt.Println(clusters)
 }
 
-func calculateDescriptors(extractor *faces.Extractor,
-	facesFolder string) (map[string]*descriptors.Descriptors, error) {
+func calculateDescriptors(extractor *gildasai.Extractor,
+	facesFolder string) (map[string]*gildasai.Descriptors, error) {
 	faceFiles, err := filepath.Glob(strings.TrimSuffix(facesFolder, "/") + "/*")
 	if err != nil {
 		return nil, err
 	}
 
-	descrs := map[string]*descriptors.Descriptors{}
+	descrs := map[string]*gildasai.Descriptors{}
 	for _, faceFile := range faceFiles {
 		fmt.Printf("processing %s\n", faceFile)
 
@@ -88,7 +88,7 @@ func saveImage(filename string, img image.Image) {
 	jpeg.Encode(f, img, nil)
 }
 
-func calculateClusters(descrs map[string]*descriptors.Descriptors, threshold float32) [][]string {
+func calculateClusters(descrs map[string]*gildasai.Descriptors, threshold float32) [][]string {
 	clusters := [][]string{}
 descrsloop:
 	for name, descr := range descrs {

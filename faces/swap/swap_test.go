@@ -4,9 +4,8 @@ import (
 	"image"
 	"testing"
 
-	"github.com/gildasch/gildas-ai/faces"
-	"github.com/gildasch/gildas-ai/faces/detection"
-	"github.com/gildasch/gildas-ai/faces/landmarks"
+	gildasai "github.com/gildasch/gildas-ai"
+	"github.com/gildasch/gildas-ai/faceapi"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/stretchr/testify/require"
 )
@@ -17,13 +16,13 @@ func TestFaceSwap(t *testing.T) {
 	dest, err := imageutils.FromFile("group.jpg")
 	require.NoError(t, err)
 
-	detector, err := detection.NewDetectorFromFile("../detection/frozen_inference_graph_face.pb")
+	detector, err := faceapi.NewDetectorFromFile("../../faceapi/frozen_inference_graph_face.pb")
 	require.NoError(t, err)
 
-	landmark, err := landmarks.NewLandmarkFromFile("../landmarks/landmarksnet", "myTag")
+	landmark, err := faceapi.NewLandmarkFromFile("../../faceapi/landmarksnet", "myTag")
 	require.NoError(t, err)
 
-	extractor := &faces.Extractor{
+	extractor := &gildasai.Extractor{
 		Detector: detector,
 		Landmark: landmark,
 	}
@@ -40,7 +39,7 @@ func TestSwap(t *testing.T) {
 	dest, err := imageutils.FromFile("syl.png")
 	require.NoError(t, err)
 
-	landmark, err := landmarks.NewLandmarkFromFile("../landmarks/landmarksnet", "myTag")
+	landmark, err := faceapi.NewLandmarkFromFile("../../faceapi/landmarksnet", "myTag")
 	require.NoError(t, err)
 
 	out, err := swap(landmark, src, dest, 0)

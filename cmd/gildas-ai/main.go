@@ -11,10 +11,7 @@ import (
 
 	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/api"
-	"github.com/gildasch/gildas-ai/faces"
-	"github.com/gildasch/gildas-ai/faces/descriptors/faceapi"
-	"github.com/gildasch/gildas-ai/faces/detection"
-	"github.com/gildasch/gildas-ai/faces/landmarks"
+	"github.com/gildasch/gildas-ai/faceapi"
 	"github.com/gildasch/gildas-ai/imagenet"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/gildasch/gildas-ai/mask"
@@ -76,12 +73,12 @@ func main() {
 		},
 	}
 
-	detector, err := detection.NewDetectorFromFile("faces/detection/frozen_inference_graph_face.pb")
+	detector, err := faceapi.NewDetectorFromFile("faces/detection/frozen_inference_graph_face.pb")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	landmark, err := landmarks.NewLandmarkFromFile(
+	landmark, err := faceapi.NewLandmarkFromFile(
 		modelsRoot+"models/face-api-js-landmarks/face-api-landmarksnet_tf_1.8.0", "myTag")
 	if err != nil {
 		log.Fatal(err)
@@ -111,7 +108,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		extractor := &faces.Extractor{
+		extractor := &gildasai.Extractor{
 			Detector:   detector,
 			Landmark:   landmark,
 			Descriptor: descriptor}
@@ -131,7 +128,7 @@ func main() {
 		app.GET("/object/api", api.ClassifyHandler(classifiers, false))
 		app.GET("/object", api.ClassifyHandler(classifiers, true))
 
-		batches := map[string]*faces.Batch{}
+		batches := map[string]*gildasai.Batch{}
 		app.GET("/faces", api.FacesHomeHandler(batches))
 		app.POST("/faces", api.FacesPostBatchHandler(extractor, batches))
 		app.GET("/faces/batch/:batchID", api.FacesGetBatchHandler(batches))

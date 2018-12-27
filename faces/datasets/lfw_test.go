@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gildasch/gildas-ai/faces"
-	"github.com/gildasch/gildas-ai/faces/descriptors"
+	gildasai "github.com/gildasch/gildas-ai"
+	"github.com/gildasch/gildas-ai/faceapi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,7 +23,7 @@ const (
 )
 
 func TestExtractionOnLFW(t *testing.T) {
-	extractor, err := faces.NewDefaultExtractor("..")
+	extractor, err := faceapi.NewDefaultExtractor("../../faceapi")
 	require.NoError(t, err)
 
 	descrs, err := extract(extractor, "")
@@ -47,7 +47,7 @@ func TestLFWEvaluation(t *testing.T) {
 		t.SkipNow()
 	}
 
-	extractor, err := faces.NewDefaultExtractor("..")
+	extractor, err := faceapi.NewDefaultExtractor("..")
 	require.NoError(t, err)
 
 	descrs, err := extract(extractor, "lfw_temp.json")
@@ -98,7 +98,7 @@ func TestLFWEvaluationOnSubset(t *testing.T) {
 		t.SkipNow()
 	}
 
-	extractor, err := faces.NewDefaultExtractor("..")
+	extractor, err := faceapi.NewDefaultExtractor("..")
 	require.NoError(t, err)
 
 	descrs, err := extract(extractor, "lfw_temp.json")
@@ -138,10 +138,10 @@ func TestLFWEvaluationOnSubset(t *testing.T) {
 	fmt.Println()
 }
 
-func extract(extractor *faces.Extractor, saveFile string) (map[string][]descriptors.Descriptors, error) {
+func extract(extractor *gildasai.Extractor, saveFile string) (map[string][]gildasai.Descriptors, error) {
 	descrs, ok := loadSaveFile(saveFile)
 	if !ok {
-		descrs = map[string][]descriptors.Descriptors{}
+		descrs = map[string][]gildasai.Descriptors{}
 		fmt.Println("Extraction...")
 
 		nameList, err := filepath.Glob("lfw/*")
@@ -183,13 +183,13 @@ func extract(extractor *faces.Extractor, saveFile string) (map[string][]descript
 	return descrs, nil
 }
 
-func loadSaveFile(saveFile string) (map[string][]descriptors.Descriptors, bool) {
+func loadSaveFile(saveFile string) (map[string][]gildasai.Descriptors, bool) {
 	b, err := ioutil.ReadFile(saveFile)
 	if err != nil {
 		return nil, false
 	}
 
-	var descrs map[string][]descriptors.Descriptors
+	var descrs map[string][]gildasai.Descriptors
 	err = json.Unmarshal(b, &descrs)
 	if err != nil {
 		return nil, false
@@ -198,7 +198,7 @@ func loadSaveFile(saveFile string) (map[string][]descriptors.Descriptors, bool) 
 	return descrs, true
 }
 
-func writeSaveFile(saveFile string, descrs map[string][]descriptors.Descriptors) error {
+func writeSaveFile(saveFile string, descrs map[string][]gildasai.Descriptors) error {
 	b, err := json.Marshal(descrs)
 	if err != nil {
 		return err

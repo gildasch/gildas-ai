@@ -3,42 +3,42 @@ package faceapi
 import (
 	"image"
 
-	"github.com/gildasch/gildas-ai/faces/descriptors"
+	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/nfnt/resize"
 	"github.com/pkg/errors"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 )
 
-type Descriptor struct {
+type Landmark struct {
 	graph   *tf.Graph
 	session *tf.Session
 }
 
-func NewDescriptor() (*Descriptor, error) {
-	return NewDescriptorFromFile("descriptorsnet", "myTag")
+func NewLandmark() (*Landmark, error) {
+	return NewLandmarkFromFile("landmarksnet", "myTag")
 }
 
-func NewDescriptorFromFile(modelName, tagName string) (*Descriptor, error) {
+func NewLandmarkFromFile(modelName, tagName string) (*Landmark, error) {
 	model, err := tf.LoadSavedModel(modelName, []string{tagName}, nil)
 	if err != nil {
 		return nil, errors.Wrapf(err,
 			"failed to load saved model %q / tag %q", modelName, tagName)
 	}
 
-	return &Descriptor{
+	return &Landmark{
 		graph:   model.Graph,
 		session: model.Session,
 	}, nil
 }
 
-func (d *Descriptor) Close() error {
+func (d *Landmark) Close() error {
 	return d.session.Close()
 }
 
-func (d *Descriptor) Compute(img image.Image) (descriptors.Descriptors, error) {
-	img = resize.Resize(150, 150, img, resize.NearestNeighbor)
+func (d *Landmark) Detect(img image.Image) (*gildasai.Landmarks, error) {
+	img = resize.Resize(112, 112, img, resize.NearestNeighbor)
 
-	tensor, err := imageToTensor(img, uint(img.Bounds().Dy()), uint(img.Bounds().Dx()))
+	tensor, err := imageToTensorLandmarks(img, uint(img.Bounds().Dy()), uint(img.Bounds().Dx()))
 	if err != nil {
 		return nil, errors.Wrap(err, "error converting image to tensor")
 	}
@@ -65,19 +65,15 @@ func (d *Descriptor) Compute(img image.Image) (descriptors.Descriptors, error) {
 	}
 
 	if len(res) < 1 {
-		return nil, errors.New("descriptors are empty")
+		return nil, errors.New("landmarks are empty")
 	}
 
-	out := make(descriptors.Descriptors, 128)
-
-	for i, v := range res[0] {
-		out[i] = v
-	}
-
-	return out, nil
+	return &gildasai.Landmarks{
+		Coords: res[0],
+	}, nil
 }
 
-func imageToTensor(img image.Image, imageHeight, imageWidth uint) (*tf.Tensor, error) {
+func imageToTensorLandmarks(img image.Image, imageHeight, imageWidth uint) (*tf.Tensor, error) {
 	var image [1][][][3]float32
 
 	for j := 0; j < int(imageHeight); j++ {
@@ -87,15 +83,15 @@ func imageToTensor(img image.Image, imageHeight, imageWidth uint) (*tf.Tensor, e
 	for i := 0; i < int(imageWidth); i++ {
 		for j := 0; j < int(imageHeight); j++ {
 			r, g, b, _ := img.At(i, j).RGBA()
-			image[0][j][i][0] = convert(r, 122.782)
-			image[0][j][i][1] = convert(g, 117.001)
-			image[0][j][i][2] = convert(b, 104.298)
+			image[0][j][i][0] = convertLandmarks(r, 122.782)
+			image[0][j][i][1] = convertLandmarks(g, 117.001)
+			image[0][j][i][2] = convertLandmarks(b, 104.298)
 		}
 	}
 
 	return tf.NewTensor(image)
 }
 
-func convert(value uint32, mean float32) float32 {
+func convertLandmarks(value uint32, mean float32) float32 {
 	return (float32(value>>8) - mean) / float32(255)
 }
