@@ -3,14 +3,15 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
-	"github.com/gildasch/gildas-ai/objects/listing"
+	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gin-gonic/gin"
 )
 
 type Store interface {
 	Contains(filename string) (bool, error)
-	Get(query, after string, n int) ([]listing.Item, error)
+	Get(query, after string, n int) ([]gildasai.PredictionItem, error)
 }
 
 func PhotosHandler(store Store) gin.HandlerFunc {
@@ -37,7 +38,7 @@ func PhotosHandler(store Store) gin.HandlerFunc {
 
 func GetPhotoHandler(store Store) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		filename := c.Param("filename")
+		filename := strings.Replace(c.Param("filename"), "//", "/", -1)
 
 		ok, err := store.Contains(filename)
 		if err != nil {

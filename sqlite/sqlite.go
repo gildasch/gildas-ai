@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	gildasai "github.com/gildasch/gildas-ai"
-	"github.com/gildasch/gildas-ai/objects/listing"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
 )
@@ -39,7 +38,7 @@ create table if not exists predictions (
 	return &Store{db}, nil
 }
 
-func (c *Store) Get(query, after string, n int) ([]listing.Item, error) {
+func (c *Store) Get(query, after string, n int) ([]gildasai.PredictionItem, error) {
 	var rows *sql.Rows
 	var err error
 
@@ -80,7 +79,7 @@ limit $3`, n)
 	}
 	defer rows.Close()
 
-	var items []listing.Item
+	var items []gildasai.PredictionItem
 	for rows.Next() {
 		var filename, labelList string
 		err := rows.Scan(&filename, &labelList)
@@ -88,8 +87,8 @@ limit $3`, n)
 			return nil, errors.Wrapf(err, "error scanning sqlite store")
 		}
 
-		items = append(items, listing.Item{
-			Filename:    filename,
+		items = append(items, gildasai.PredictionItem{
+			Identifier:  filename,
 			Predictions: extractPredictions(labelList)})
 	}
 

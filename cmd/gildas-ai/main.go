@@ -18,7 +18,7 @@ import (
 	"github.com/gildasch/gildas-ai/imagenet"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/gildasch/gildas-ai/mask"
-	"github.com/gildasch/gildas-ai/objects/listing/stores/sqlite"
+	"github.com/gildasch/gildas-ai/sqlite"
 	"github.com/gin-contrib/cache"
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
