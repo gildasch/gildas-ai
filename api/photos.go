@@ -9,18 +9,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Store interface {
-	Contains(filename string) (bool, error)
-	Get(query, after string, n int) ([]gildasai.PredictionItem, error)
-}
-
-func PhotosHandler(store Store) gin.HandlerFunc {
+func PhotosHandler(store gildasai.PredictionStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		query := c.Query("query")
 		after := c.Query("after")
 		n := 100
 
-		items, err := store.Get(query, after, n)
+		items, err := store.SearchPrediction(query, after, n)
 		if err != nil {
 			fmt.Println(err)
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -36,11 +31,11 @@ func PhotosHandler(store Store) gin.HandlerFunc {
 	}
 }
 
-func GetPhotoHandler(store Store) gin.HandlerFunc {
+func GetPhotoHandler(store gildasai.PredictionStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		filename := strings.Replace(c.Param("filename"), "//", "/", -1)
 
-		ok, err := store.Contains(filename)
+		_, ok, err := store.GetPrediction(filename)
 		if err != nil {
 			fmt.Println(err)
 			c.AbortWithStatus(http.StatusInternalServerError)

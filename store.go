@@ -2,9 +2,11 @@ package gildasai
 
 type PredictionItem struct {
 	Identifier  string
-	Predictions []Prediction
+	Predictions Predictions
 }
 
 type PredictionStore interface {
-	Get(query, after string, n int) ([]PredictionItem, error)
+	GetPrediction(id string) (*PredictionItem, bool, error)
+	StorePrediction(id string, item *PredictionItem) error
+	SearchPrediction(query, after string, n int) ([]*PredictionItem, error)
 }

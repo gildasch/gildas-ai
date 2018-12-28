@@ -2,8 +2,6 @@ package sqlite
 
 import (
 	"database/sql"
-	"strconv"
-	"strings"
 
 	gildasai "github.com/gildasch/gildas-ai"
 	_ "github.com/mattn/go-sqlite3"
@@ -22,12 +20,12 @@ func NewStore(filename string) (*Store, error) {
 
 	createDBStmt := `
 create table if not exists predictions (
-    filename text not null,
+    id      text not null,
     network text not null,
-    label text not null,
-    score real not null,
+    label   text not null,
+    score   real not null,
     created timestamp default CURRENT_TIMESTAMP,
-    primary key (filename, network, label)
+    primary key (id, network, label)
 )
 	`
 	_, err = db.Exec(createDBStmt)
@@ -38,40 +36,102 @@ create table if not exists predictions (
 	return &Store{db}, nil
 }
 
-func (c *Store) Get(query, after string, n int) ([]gildasai.PredictionItem, error) {
+func (c *Store) GetPrediction(id string) (*gildasai.PredictionItem, bool, error) {
+	rows, err := c.Query(`
+select network, label, score
+from predictions
+where id = $1
+order by score desc`, id)
+	if err != nil {
+		return nil, true, err
+	}
+	defer rows.Close()
+
+	var preds gildasai.Predictions
+	for rows.Next() {
+		var network, label string
+		var score float32
+		err = rows.Scan(&network, &label, &score)
+		if err != nil {
+			return nil, true, err
+		}
+		preds = append(preds, gildasai.Prediction{
+			Network: network,
+			Label:   label,
+			Score:   score,
+		})
+	}
+
+	if len(preds) == 0 {
+		return nil, false, nil
+	}
+
+	return &gildasai.PredictionItem{
+		Identifier:  id,
+		Predictions: preds}, true, nil
+}
+
+func (c *Store) StorePrediction(id string, item *gildasai.PredictionItem) error {
+	tx, err := c.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, p := range item.Predictions {
+		_, err := tx.Exec(`
+insert into predictions(id, network, label, score)
+values ($1, $2, $3, $4)`,
+			item.Identifier, p.Network, p.Label, p.Score)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Store) SearchPrediction(query, after string, n int) ([]*gildasai.PredictionItem, error) {
 	var rows *sql.Rows
 	var err error
 
 	if query != "" && after != "" {
 		rows, err = c.Query(`
-select filename, group_concat(label || ':' || score, ';')
+select id, network, label, score
 from predictions
-where label like $1 and filename > $2
-group by filename
-order by filename desc, score desc
-limit $3`, "%"+query+"%", after, n)
+where id in (
+  select id from predictions
+  where label like $1 and id > $2
+  limit $3
+)
+order by score desc`, "%"+query+"%", after, n)
 	} else if query != "" {
 		rows, err = c.Query(`
-select filename, group_concat(label || ':' || score, ';')
+select id, network, label, score
 from predictions
-where label like $1
-group by filename
-order by filename desc, score desc
-limit $3`, "%"+query+"%", n)
+where id in (
+  select id from predictions
+  where label like $1
+  limit $3
+)
+order by score desc`, "%"+query+"%", n)
 	} else if after != "" {
 		rows, err = c.Query(`
-select distinct filename, group_concat(label || ':' || score, ';')
+select distinct id, network, label, score
 from predictions
-where filename > $2
-group by filename
-order by filename desc, score desc
+where id > $2
+order by score desc
 limit $3`, after, n)
 	} else {
 		rows, err = c.Query(`
-select distinct filename, group_concat(label || ':' || score, ';')
+select distinct id, network, label, score
 from predictions
-group by filename
-order by filename desc, score desc
+order by score desc
 limit $3`, n)
 	}
 	if err != nil {
@@ -79,57 +139,26 @@ limit $3`, n)
 	}
 	defer rows.Close()
 
-	var items []gildasai.PredictionItem
+	preds := map[string]gildasai.Predictions{}
 	for rows.Next() {
-		var filename, labelList string
-		err := rows.Scan(&filename, &labelList)
+		var id, networks, label string
+		var score float32
+		err := rows.Scan(&id, &networks, &label, &score)
 		if err != nil {
 			return nil, errors.Wrapf(err, "error scanning sqlite store")
 		}
 
-		items = append(items, gildasai.PredictionItem{
-			Identifier:  filename,
-			Predictions: extractPredictions(labelList)})
+		preds[id] = append(preds[id], gildasai.Prediction{
+			Network: networks,
+			Label:   label,
+			Score:   score})
 	}
 
+	var items []*gildasai.PredictionItem
+	for id, p := range preds {
+		items = append(items, &gildasai.PredictionItem{
+			Identifier:  id,
+			Predictions: p})
+	}
 	return items, nil
-}
-
-func (c *Store) Contains(filename string) (bool, error) {
-	rows, err := c.Query(`
-select filename
-from predictions
-where filename = $1
-limit 1`, filename)
-	if err != nil {
-		return false, err
-	}
-	defer rows.Close()
-
-	return rows.Next(), nil
-}
-
-func extractPredictions(labelList string) []gildasai.Prediction {
-	splitted := strings.Split(labelList, ";")
-
-	var predictions []gildasai.Prediction
-	for _, p := range splitted {
-		labelAndScore := strings.Split(p, ":")
-		if len(labelAndScore) != 2 {
-			continue
-		}
-
-		label := labelAndScore[0]
-		score, err := strconv.ParseFloat(labelAndScore[1], 32)
-		if err != nil {
-			continue
-		}
-
-		predictions = append(predictions, gildasai.Prediction{
-			Label: label,
-			Score: float32(score),
-		})
-	}
-
-	return predictions
 }

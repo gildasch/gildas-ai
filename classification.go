@@ -8,8 +8,9 @@ import (
 type Predictions []Prediction
 
 type Prediction struct {
-	Score float32
-	Label string
+	Network string
+	Score   float32
+	Label   string
 }
 
 func (p Predictions) Best(n int) []Prediction {
