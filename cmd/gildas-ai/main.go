@@ -73,7 +73,7 @@ func main() {
 		},
 	}
 
-	detector, err := faceapi.NewDetectorFromFile("faces/detection/frozen_inference_graph_face.pb")
+	detector, err := faceapi.NewDetectorFromFile("faceapi/frozen_inference_graph_face.pb")
 	if err != nil {
 		log.Fatal(err)
 	}
