@@ -141,7 +141,12 @@ func main() {
 		store := persistence.NewInMemoryStore(365 * 24 * time.Hour)
 		app.GET("/faceswap", cache.CachePage(store, 12*time.Hour, api.FaceSwapHandler(extractor, landmark)))
 
-		maskDetector, err := maskrcnn.NewRCNN(modelsRoot+"mask/mask_rcnn_coco_tf_1.8.0", "myTag")
+		if modelsRoot != "" {
+			modelsRoot += "mask/"
+		} else {
+			modelsRoot = "maskrcnn/"
+		}
+		maskDetector, err := maskrcnn.NewRCNN(modelsRoot+"mask_rcnn_coco_tf_1.8.0", "myTag")
 		if err != nil {
 			log.Fatal(err)
 		}
