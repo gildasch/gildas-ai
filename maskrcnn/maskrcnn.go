@@ -1,16 +1,12 @@
-package mask
+package maskrcnn
 
 import (
-	"fmt"
 	"image"
 	"image/color"
-	"image/draw"
 	"math"
-	"math/rand"
 
-	"github.com/fogleman/gg"
+	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/imageutils"
-	colorful "github.com/lucasb-eyer/go-colorful"
 	"github.com/pkg/errors"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 )
@@ -34,6 +30,42 @@ func NewRCNN(modelPath, tagName string) (*RCNN, error) {
 
 func (r *RCNN) Close() error {
 	return r.model.Session.Close()
+}
+
+func (r *RCNN) Detect(img image.Image) ([]gildasai.Mask, error) {
+	detections, masks, err := r.detect(img)
+	if err != nil {
+		return nil, err
+	}
+
+	var gmasks []gildasai.Mask
+	for i := range detections.Values[0] {
+		classID := int(detections.Values[0][i][4])
+		if classID == 0 {
+			continue
+		}
+
+		m := gildasai.Mask{
+			Box: image.Rectangle{
+				Min: image.Point{
+					X: int(detections.Values[0][i][1] * float32(img.Bounds().Dx())),
+					Y: int(detections.Values[0][i][0] * float32(img.Bounds().Dy())),
+				},
+				Max: image.Point{
+					X: int(detections.Values[0][i][3] * float32(img.Bounds().Dx())),
+					Y: int(detections.Values[0][i][2] * float32(img.Bounds().Dy())),
+				},
+			},
+			Score: detections.Values[0][i][5],
+			Label: classes[classID],
+		}
+
+		m.Mask = spread(masks.Values[0][i], classID, m.Box)
+
+		gmasks = append(gmasks, m)
+	}
+
+	return gmasks, nil
 }
 
 type Detections struct {
@@ -61,117 +93,30 @@ var classes = []string{
 	"sink", "refrigerator", "book", "clock", "vase", "scissors",
 	"teddy bear", "hair drier", "toothbrush"}
 
-func nextColor() color.Color {
-	r, g, b := colorful.Hsv(float64(rand.Intn(360)), 1, 0.7).RGB255()
-	return color.NRGBA{R: r, G: g, B: b, A: 128}
-}
-
-func (m *Masks) DrawMasks(detections *Detections, img image.Image) image.Image {
-	maskImages := m.GetAllOnImage(detections, img)
-
-	withMasks := image.NewNRGBA(img.Bounds())
-	draw.Draw(withMasks, img.Bounds(), img, image.ZP, draw.Over)
-
-	for i, mi := range maskImages {
-		draw.Draw(withMasks, img.Bounds(), mi, image.ZP, draw.Over)
-
-		label := classes[int(detections.Values[0][i][4])]
-		score := detections.Values[0][i][5]
-		x := detections.Values[0][i][1]
-		y := detections.Values[0][i][0]
-		draw.Draw(withMasks, img.Bounds(),
-			labelImage(fmt.Sprintf("%s (%.2f%%)", label, score), float64(x), float64(y), img.Bounds()),
-			image.ZP, draw.Over)
-	}
-
-	return withMasks
-}
-
-func labelImage(label string, x, y float64, bounds image.Rectangle) image.Image {
-	ctx := gg.NewContext(bounds.Dx(), bounds.Dy())
-	ctx.SetHexColor("#FFF")
-	ctx.LoadFontFace("static/LiberationSans-Regular.ttf", 24)
-	ctx.DrawString(label, x*float64(bounds.Dx()), y*float64(bounds.Dy()))
-	return ctx.Image()
-}
-
-func (m *Masks) GetAllOnImage(detections *Detections, img image.Image) []image.Image {
-	var masks []image.Image
-
-	for i := range detections.Values[0] {
-		box := image.Rectangle{
-			Min: image.Point{
-				X: int(detections.Values[0][i][1] * float32(img.Bounds().Dx())),
-				Y: int(detections.Values[0][i][0] * float32(img.Bounds().Dy())),
-			},
-			Max: image.Point{
-				X: int(detections.Values[0][i][3] * float32(img.Bounds().Dx())),
-				Y: int(detections.Values[0][i][2] * float32(img.Bounds().Dy())),
-			},
-		}
-		classID := int(detections.Values[0][i][4])
-		score := detections.Values[0][i][5]
-
-		if score == 0 {
-			break
-		}
-
-		masks = append(masks, m.GetOnImage(i, classID, box, img, nextColor()))
-	}
-
-	return masks
-}
-
-func (m *Masks) GetOnImage(detectionID, classID int, box image.Rectangle, img image.Image, c color.Color) image.Image {
-	maskImage := image.NewNRGBA(img.Bounds())
-
-	col, ok := colorful.MakeColor(c)
-	if !ok {
-		fmt.Println("color is invisible")
-		return maskImage
-	}
-
-	mask := image.NewNRGBA(image.Rect(0, 0, 28, 28))
+func spread(maskArray [][][]float32, classID int, box image.Rectangle) image.Image {
+	mask := image.NewGray(image.Rect(0, 0, 28, 28))
 	for x := mask.Bounds().Min.X; x < mask.Bounds().Max.X; x++ {
 		for y := mask.Bounds().Min.Y; y < mask.Bounds().Max.Y; y++ {
-			h, s, _ := col.Hsv()
-			mask.Set(x, y, colorful.Hsv(h, s, float64(m.Values[0][detectionID][x][y][classID])))
+			mask.Set(x, y, color.Gray{Y: uint8(float32(255) * maskArray[x][y][classID])})
 		}
 	}
 	maskResized := imageutils.Scaled(mask, uint(box.Bounds().Dx()), uint(box.Bounds().Dy()))
 
-	maskThreshold := image.NewNRGBA(img.Bounds())
+	maskImage := image.NewNRGBA(image.Rect(0, 0, box.Dx(), box.Dy()))
 	for x := maskResized.Bounds().Min.Y; x < maskResized.Bounds().Max.Y; x++ {
 		for y := maskResized.Bounds().Min.X; y < maskResized.Bounds().Max.X; y++ {
-			c, ok := colorful.MakeColor(maskResized.At(y, x))
-			if !ok {
+			r, g, b, _ := maskResized.At(y, x).RGBA()
+			if r < 0xffff/2 {
 				continue
 			}
-			h, s, l := c.Hsv()
-			if l < 0.5 {
-				continue
-			}
-			r, g, b, _ := colorful.Hsv(h, s, 1).RGBA()
-			maskThreshold.Set(x, y, color.NRGBA{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8), A: 128})
+			maskImage.Set(x, y, color.NRGBA{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8), A: 128})
 		}
-	}
-
-	draw.Draw(maskImage, box.Bounds(), maskThreshold, image.ZP, draw.Over)
-
-	for x := box.Bounds().Min.X; x < box.Bounds().Max.X; x++ {
-		maskImage.Set(x, box.Bounds().Min.Y, color.NRGBA{R: 255, A: 255})
-		maskImage.Set(x, box.Bounds().Max.Y, color.NRGBA{R: 255, A: 255})
-	}
-
-	for y := box.Bounds().Min.Y; y < box.Bounds().Max.Y; y++ {
-		maskImage.Set(box.Bounds().Min.X, y, color.NRGBA{R: 255, A: 255})
-		maskImage.Set(box.Bounds().Max.X, y, color.NRGBA{R: 255, A: 255})
 	}
 
 	return maskImage
 }
 
-func (r *RCNN) Detect(img image.Image) (*Detections, *Masks, error) {
+func (r *RCNN) detect(img image.Image) (*Detections, *Masks, error) {
 	imgTensor, meta, anchors, err := makeInputs(img)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error converting image to tensor")

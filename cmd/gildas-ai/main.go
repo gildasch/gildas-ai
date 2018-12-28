@@ -14,7 +14,7 @@ import (
 	"github.com/gildasch/gildas-ai/faceapi"
 	"github.com/gildasch/gildas-ai/imagenet"
 	"github.com/gildasch/gildas-ai/imageutils"
-	"github.com/gildasch/gildas-ai/mask"
+	"github.com/gildasch/gildas-ai/maskrcnn"
 	"github.com/gildasch/gildas-ai/sqlite"
 	"github.com/gin-contrib/cache"
 	"github.com/gin-contrib/cache/persistence"
@@ -141,7 +141,7 @@ func main() {
 		store := persistence.NewInMemoryStore(365 * 24 * time.Hour)
 		app.GET("/faceswap", cache.CachePage(store, 12*time.Hour, api.FaceSwapHandler(extractor, landmark)))
 
-		maskDetector, err := mask.NewRCNN(modelsRoot+"mask/mask_rcnn_coco_tf_1.8.0", "myTag")
+		maskDetector, err := maskrcnn.NewRCNN(modelsRoot+"mask/mask_rcnn_coco_tf_1.8.0", "myTag")
 		if err != nil {
 			log.Fatal(err)
 		}

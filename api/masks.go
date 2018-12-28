@@ -9,13 +9,13 @@ import (
 	"strings"
 	"time"
 
+	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/imageutils"
-	"github.com/gildasch/gildas-ai/mask"
 	"github.com/gin-gonic/gin"
 )
 
 type Detector interface {
-	Detect(img image.Image) (*mask.Detections, *mask.Masks, error)
+	Detect(img image.Image) ([]gildasai.Mask, error)
 }
 
 type MaskResult struct {
@@ -73,13 +73,13 @@ func calculateMask(detector Detector, imageURL string) (*MaskResult, error) {
 	}
 
 	start := time.Now()
-	detecs, masks, err := detector.Detect(img)
+	masks, err := detector.Detect(img)
 	if err != nil {
 		return nil, err
 	}
 	elapsed := time.Since(start)
 
-	withMasks := masks.DrawMasks(detecs, img)
+	withMasks := gildasai.DrawMasks(img, masks)
 
 	var withMasksBuf bytes.Buffer
 	err = jpeg.Encode(&withMasksBuf, withMasks, nil)

@@ -1,12 +1,11 @@
-package mask
+package maskrcnn
 
 import (
 	"fmt"
-	"image"
-	"image/draw"
 	"os"
 	"testing"
 
+	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,23 +14,19 @@ import (
 var modelsRoot = os.Getenv("MODELS_ROOT")
 
 func TestRunRCNN(t *testing.T) {
-	r, err := NewRCNN(modelsRoot+"mask/mask_rcnn_coco", "myTag")
+	if modelsRoot != "" {
+		modelsRoot += "mask/"
+	}
+	r, err := NewRCNN(modelsRoot+"mask_rcnn_coco", "myTag")
 	require.NoError(t, err)
 
 	img, err := imageutils.FromFile("testdata/ruedesmartyrs.jpg")
 	require.NoError(t, err)
 
-	detections, masks, err := r.Detect(img)
+	masks, err := r.Detect(img)
 	require.NoError(t, err)
 
-	maskImages := masks.GetAllOnImage(detections, img)
-
-	withMasks := image.NewNRGBA(img.Bounds())
-	draw.Draw(withMasks, img.Bounds(), img, image.ZP, draw.Over)
-
-	for _, mi := range maskImages {
-		draw.Draw(withMasks, img.Bounds(), mi, image.ZP, draw.Over)
-	}
+	withMasks := gildasai.DrawMasks(img, masks)
 
 	imageutils.AssertImageEqual(t, "testdata/ruedesmartyrs-expected.png", withMasks)
 }
