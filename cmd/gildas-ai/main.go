@@ -103,7 +103,11 @@ func main() {
 			classifiers[name] = m
 		}
 
-		sqliteStore, err := sqlite.NewStore(".inception.sqlite")
+		sqliteLocation := ".inception.sqlite"
+		if os.Getenv("SQLITE_STORE") != "" {
+			sqliteLocation = os.Getenv("SQLITE_STORE")
+		}
+		sqliteStore, err := sqlite.NewStore(sqliteLocation)
 		if err != nil {
 			log.Fatal(err)
 		}
