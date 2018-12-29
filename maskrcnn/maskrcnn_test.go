@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/fogleman/gg"
 	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/imageutils"
 	"github.com/stretchr/testify/assert"
@@ -27,6 +28,8 @@ func TestRunRCNN(t *testing.T) {
 	require.NoError(t, err)
 
 	withMasks := gildasai.DrawMasks(img, masks)
+
+	gg.SavePNG("out-with-masks.png", withMasks)
 
 	imageutils.AssertImageEqual(t, "testdata/ruedesmartyrs-expected.png", withMasks)
 }

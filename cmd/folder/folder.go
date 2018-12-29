@@ -46,7 +46,7 @@ func main() {
 			InputLayer:      "module/hub_input/images",
 			OutputLayer:     "module/final_layer/predictions",
 			ImageMode:       imagenet.ImageModeTensorflowPositive,
-			Labels:          modelRootFolder + "/../labels/imagenet_class_index.json",
+			LabelsPath:      modelRootFolder + "/../labels/imagenet_class_index.json",
 			ImageHeight:     331,
 			ImageWidth:      331,
 			IndexCorrection: -1,

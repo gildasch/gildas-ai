@@ -11,23 +11,24 @@ import (
 
 type Model struct {
 	model  *tf.SavedModel
-	labels Labels
+	Labels Labels
 
+	ID                      string
 	ModelName, TagName      string
 	InputLayer, OutputLayer string
 	ImageMode               string
-	Labels                  string
+	LabelsPath              string
 	ImageHeight, ImageWidth uint
 	IndexCorrection         int
 }
 
 func (m *Model) Load() (func() error, error) {
-	if m.Labels != "" {
-		l, err := LabelsFromFile(m.Labels, m.IndexCorrection)
+	if m.Labels == nil && m.LabelsPath != "" {
+		l, err := LabelsFromFile(m.LabelsPath)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to read labels from file %q", m.Labels)
+			return nil, errors.Wrapf(err, "failed to read labels from file %q", m.LabelsPath)
 		}
-		m.labels = l
+		m.Labels = l
 	}
 
 	model, err := tf.LoadSavedModel(m.ModelName, []string{m.TagName}, nil)
@@ -79,8 +80,9 @@ func (m *Model) Classify(img image.Image) (gildasai.Predictions, error) {
 
 	for i, r := range res[0] {
 		preds = append(preds, gildasai.Prediction{
-			Score: r,
-			Label: m.labels.Get(i),
+			Network: m.ID,
+			Score:   r,
+			Label:   m.Labels.Get(i, m.IndexCorrection),
 		})
 	}
 

@@ -29,48 +29,11 @@ func usage() {
 func main() {
 	modelsRoot := os.Getenv("MODELS_ROOT")
 
-	models := map[string]*imagenet.Model{
-		"xception": &imagenet.Model{
-			ModelName:   modelsRoot + "models/harshsikka-Keras-Xception/xception_tf_1.8.0",
-			TagName:     "myTag",
-			InputLayer:  "input_1",
-			OutputLayer: "predictions/Softmax",
-			ImageMode:   imagenet.ImageModeTensorflow,
-			Labels:      "imagenet/imagenet_class_index.json",
-			ImageHeight: 299,
-			ImageWidth:  299,
-		},
-		"resnet": &imagenet.Model{
-			ModelName:   modelsRoot + "models/tonyshih-Keras-ResNet50/resnet_tf_1.8.0",
-			TagName:     "myTag",
-			InputLayer:  "input_1",
-			OutputLayer: "fc1000/Softmax",
-			ImageMode:   imagenet.ImageModeCaffe,
-			Labels:      "imagenet/imagenet_class_index.json",
-			ImageHeight: 224,
-			ImageWidth:  224,
-		},
-		"nasnet": &imagenet.Model{
-			ModelName:   modelsRoot + "models/jbrandowski_NASNet_Mobile/nasnet-mobile_tf_1.8.0",
-			TagName:     "myTag",
-			InputLayer:  "input_1",
-			OutputLayer: "predictions/Softmax",
-			ImageMode:   imagenet.ImageModeTensorflow,
-			Labels:      "imagenet/imagenet_class_index.json",
-			ImageHeight: 224,
-			ImageWidth:  224,
-		},
-		"pnasnet": &imagenet.Model{
-			ModelName:       modelsRoot + "models/tfhub_imagenet_pnasnet_large_classification/pnasnet_tf_1.8.0",
-			TagName:         "myTag",
-			InputLayer:      "module/hub_input/images",
-			OutputLayer:     "module/final_layer/predictions",
-			ImageMode:       imagenet.ImageModeTensorflowPositive,
-			Labels:          "imagenet/imagenet_class_index.json",
-			ImageHeight:     331,
-			ImageWidth:      331,
-			IndexCorrection: -1,
-		},
+	models := map[string]func(modelRoot string) (*imagenet.Model, func() error, error){
+		"xception": imagenet.NewXception,
+		"resnet":   imagenet.NewXception,
+		"nasnet":   imagenet.NewResnet,
+		"pnasnet":  imagenet.NewPnasnet,
 	}
 
 	detector, err := faceapi.NewDetectorFromFile("faceapi/frozen_inference_graph_face.pb")
@@ -92,8 +55,8 @@ func main() {
 
 	if len(os.Args) >= 2 && os.Args[1] == "web" {
 		classifiers := map[string]gildasai.Classifier{}
-		for name, m := range models {
-			close, err := m.Load()
+		for name, load := range models {
+			m, close, err := load(modelsRoot)
 			if err != nil {
 				fmt.Printf("Error loading saved model: %s\n", err.Error())
 				continue
@@ -168,12 +131,12 @@ func main() {
 	modelName := os.Args[1]
 	imageName := os.Args[2]
 
-	model, ok := models[modelName]
+	load, ok := models[modelName]
 	if !ok {
 		usage()
 		return
 	}
-	close, err := model.Load()
+	model, close, err := load(modelsRoot)
 	if err != nil {
 		fmt.Printf("Error loading saved model: %s\n", err.Error())
 		return
