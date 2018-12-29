@@ -35,7 +35,7 @@ func DrawMasks(dst image.Image, masks []Mask) image.Image {
 		label := m.Label
 		score := m.Score
 		draw.Draw(withMasks, dst.Bounds(),
-			labelImage(fmt.Sprintf("%s (%.2f%%)", label, score), m.Box.Min, dst.Bounds()),
+			labelImage(fmt.Sprintf("%s (%.2f%%)", label, 100*score), m.Box.Min, dst.Bounds()),
 			image.ZP, draw.Over)
 	}
 
