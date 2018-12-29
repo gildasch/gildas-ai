@@ -2,8 +2,8 @@ package imagenet
 
 func NewXception(modelRoot string) (*Model, func() error, error) {
 	model := &Model{
-		ID:          "xception_tf_1.8.0",
-		ModelName:   modelRoot + "models/harshsikka-Keras-Xception/xception_tf_1.8.0",
+		ID:          "xception_tf_" + tfVersion(),
+		ModelName:   modelRoot + "models/harshsikka-Keras-Xception/xception_tf_" + tfVersion(),
 		TagName:     "myTag",
 		InputLayer:  "input_1",
 		OutputLayer: "predictions/Softmax",

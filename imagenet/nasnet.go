@@ -2,8 +2,8 @@ package imagenet
 
 func NewNasnet(modelRoot string) (*Model, func() error, error) {
 	model := &Model{
-		ID:          "nasnet-mobile_tf_1.8.0",
-		ModelName:   modelRoot + "models/jbrandowski_NASNet_Mobile/nasnet-mobile_tf_1.8.0",
+		ID:          "nasnet-mobile_tf_" + tfVersion(),
+		ModelName:   modelRoot + "models/jbrandowski_NASNet_Mobile/nasnet-mobile_tf_" + tfVersion(),
 		TagName:     "myTag",
 		InputLayer:  "input_1",
 		OutputLayer: "predictions/Softmax",

@@ -12,13 +12,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var modelsRoot = os.Getenv("MODELS_ROOT")
-
 func TestRunRCNN(t *testing.T) {
+	var modelsRoot = os.Getenv("MODELS_ROOT")
 	if modelsRoot != "" {
 		modelsRoot += "mask/"
 	}
-	r, err := NewRCNN(modelsRoot+"mask_rcnn_coco_tf_1.8.0", "myTag")
+	tfSuffix := ""
+	if os.Getenv("TENSORFLOW_VERSION") == "1.8.0" {
+		tfSuffix = "_tf_1.8.0"
+	}
+	r, err := NewRCNN(modelsRoot+"mask_rcnn_coco"+tfSuffix, "myTag")
 	require.NoError(t, err)
 
 	img, err := imageutils.FromFile("testdata/ruedesmartyrs.jpg")

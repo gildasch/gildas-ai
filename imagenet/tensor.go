@@ -2,6 +2,7 @@ package imagenet
 
 import (
 	"image"
+	"os"
 
 	gildasai "github.com/gildasch/gildas-ai"
 	"github.com/gildasch/gildas-ai/imageutils"
@@ -175,4 +176,12 @@ func imageToTensorCaffe(img image.Image, imageHeight, imageWidth uint) (*tf.Tens
 
 func convertCaffe(value uint32) float32 {
 	return float32(value >> 8)
+}
+
+func tfVersion() string {
+	if os.Getenv("TENSORFLOW_VERSION") != "" {
+		return os.Getenv("TENSORFLOW_VERSION")
+	}
+
+	return "1.8.0"
 }

@@ -2,8 +2,8 @@ package imagenet
 
 func NewPnasnet(modelRoot string) (*Model, func() error, error) {
 	model := &Model{
-		ID:              "pnasnet_tf_1.8.0",
-		ModelName:       modelRoot + "models/tfhub_imagenet_pnasnet_large_classification/pnasnet_tf_1.8.0",
+		ID:              "pnasnet_tf_" + tfVersion(),
+		ModelName:       modelRoot + "models/tfhub_imagenet_pnasnet_large_classification/pnasnet_tf_" + tfVersion(),
 		TagName:         "myTag",
 		InputLayer:      "module/hub_input/images",
 		OutputLayer:     "module/final_layer/predictions",
