@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"image"
 	"os"
 	"testing"
 
@@ -79,5 +80,52 @@ var testPredictionItems = []*gildasai.PredictionItem{
 			{Network: "ImageFaceNet C-CNN", Score: 0.1621, Label: "typewriter_keyboard"},
 			{Network: "ImageFaceNet C-CNN", Score: 0.011, Label: "fork"},
 		},
+	},
+}
+
+func TestStoreAndGetFaces(t *testing.T) {
+	s, err := NewStore("/tmp/gildasai.test.sqlite")
+	require.NoError(t, err)
+	defer s.Close()
+	defer os.Remove("/tmp/gildasai.test.sqlite")
+
+	for _, item := range testFaceItems {
+		err = s.StoreFace(item)
+		require.NoError(t, err)
+	}
+
+	actual, err := s.GetFaces()
+	require.NoError(t, err)
+	assert.Equal(t, testFaceItems, actual)
+}
+
+var testFaceItems = []*gildasai.FaceItem{
+	{
+		Identifier: "a wonderful picture of my ox",
+		Network:    "face-api-js",
+		Detection: gildasai.Detection{
+			Box:   image.Rect(0, 0, 30, 45),
+			Score: 0.94,
+		},
+		Landmarks: gildasai.Landmarks{
+			Coords: []float32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 78754.43},
+		},
+		Descriptors: gildasai.Descriptors(
+			[]float32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 78754.43},
+		),
+	},
+	{
+		Identifier: "a wonderful picture of my ox",
+		Network:    "face-api-js",
+		Detection: gildasai.Detection{
+			Box:   image.Rect(100, 100, 130, 145),
+			Score: 0.54,
+		},
+		Landmarks: gildasai.Landmarks{
+			Coords: []float32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 78914.43},
+		},
+		Descriptors: gildasai.Descriptors(
+			[]float32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 72914.4366},
+		),
 	},
 }

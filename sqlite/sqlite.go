@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"database/sql"
+	"encoding/json"
 
 	gildasai "github.com/gildasch/gildas-ai"
 	_ "github.com/mattn/go-sqlite3"
@@ -18,7 +19,7 @@ func NewStore(filename string) (*Store, error) {
 		return nil, err
 	}
 
-	createDBStmt := `
+	createPredictionsDBStmt := `
 create table if not exists predictions (
     id      text not null,
     network text not null,
@@ -28,9 +29,25 @@ create table if not exists predictions (
     primary key (id, network, label)
 )
 	`
-	_, err = db.Exec(createDBStmt)
+	_, err = db.Exec(createPredictionsDBStmt)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error running the SQL for DB creation %q\n", createDBStmt)
+		return nil, errors.Wrapf(err, "error running the SQL for DB creation %q\n", createPredictionsDBStmt)
+	}
+
+	createFaceDBStmt := `
+create table if not exists faces (
+    id          text not null,
+    network     text not null,
+    detection   text not null,
+    landmarks   text not null,
+    descriptors text not null,
+    created     timestamp default CURRENT_TIMESTAMP,
+    primary key (id, network, detection)
+)
+	`
+	_, err = db.Exec(createFaceDBStmt)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error running the SQL for DB creation %q\n", createFaceDBStmt)
 	}
 
 	return &Store{db}, nil
@@ -160,5 +177,67 @@ limit $3`, n)
 			Identifier:  id,
 			Predictions: p})
 	}
+	return items, nil
+}
+
+func (c *Store) StoreFace(item *gildasai.FaceItem) error {
+	detection, err := json.Marshal(item.Detection)
+	if err != nil {
+		return nil
+	}
+	landmarks, err := json.Marshal(item.Landmarks)
+	if err != nil {
+		return nil
+	}
+	descriptors, err := json.Marshal(item.Descriptors)
+	if err != nil {
+		return nil
+	}
+
+	_, err = c.Exec(`
+insert into faces(id, network, detection, landmarks, descriptors)
+values ($1, $2, $3, $4, $5)`,
+		item.Identifier, item.Network, string(detection), string(landmarks), string(descriptors))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Store) GetFaces() ([]*gildasai.FaceItem, error) {
+	rows, err := c.Query(`
+select id, network, detection, landmarks, descriptors
+from faces`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []*gildasai.FaceItem
+	for rows.Next() {
+		var item gildasai.FaceItem
+		var detection, landmarks, descriptors string
+		err = rows.Scan(&item.Identifier, &item.Network, &detection, &landmarks, &descriptors)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal([]byte(detection), &item.Detection)
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal([]byte(landmarks), &item.Landmarks)
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal([]byte(descriptors), &item.Descriptors)
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, &item)
+	}
+
 	return items, nil
 }
