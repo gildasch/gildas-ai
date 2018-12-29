@@ -1,6 +1,7 @@
 package imagenet
 
 import (
+	"os"
 	"testing"
 
 	gildasai "github.com/gildasch/gildas-ai"
@@ -10,7 +11,11 @@ import (
 )
 
 func TestNasnet(t *testing.T) {
-	m, close, err := NewNasnet("../")
+	var modelsRoot = os.Getenv("MODELS_ROOT")
+	if modelsRoot == "" {
+		modelsRoot = "../"
+	}
+	m, close, err := NewNasnet(modelsRoot)
 	require.NoError(t, err)
 	defer close()
 

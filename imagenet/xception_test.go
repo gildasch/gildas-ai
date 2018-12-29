@@ -1,6 +1,7 @@
 package imagenet
 
 import (
+	"os"
 	"testing"
 
 	gildasai "github.com/gildasch/gildas-ai"
@@ -10,7 +11,11 @@ import (
 )
 
 func TestXception(t *testing.T) {
-	m, close, err := NewXception("../")
+	var modelsRoot = os.Getenv("MODELS_ROOT")
+	if modelsRoot == "" {
+		modelsRoot = "../"
+	}
+	m, close, err := NewXception(modelsRoot)
 	require.NoError(t, err)
 	defer close()
 
