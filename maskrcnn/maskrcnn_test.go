@@ -18,7 +18,7 @@ func TestRunRCNN(t *testing.T) {
 	if modelsRoot != "" {
 		modelsRoot += "mask/"
 	}
-	r, err := NewRCNN(modelsRoot+"mask_rcnn_coco", "myTag")
+	r, err := NewRCNN(modelsRoot+"mask_rcnn_coco_tf_1.8.0", "myTag")
 	require.NoError(t, err)
 
 	img, err := imageutils.FromFile("testdata/ruedesmartyrs.jpg")

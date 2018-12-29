@@ -1,4 +1,4 @@
-FROM gildasch/tensorflow-go:v1.12-imagemagick
+FROM gildasch/tensorflow-go:v1.8-imagemagick
 
 RUN go get github.com/gin-gonic/gin && \
     go get github.com/nfnt/resize && \
