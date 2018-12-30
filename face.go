@@ -98,10 +98,8 @@ func (l *Landmarks) Center(cropped, full image.Image) image.Image {
 		angle = -90
 	case dy == 0 && dx < 0:
 		angle = 90
-	case dx/dy > 0:
-		angle = -math.Atan(dx/dy) * 180 / math.Pi
 	default:
-		angle = math.Atan(dx/dy) * 180 / math.Pi
+		angle = -math.Atan(dx/dy) * 180 / math.Pi
 	}
 	rotated := imaging.Rotate(full, angle, color.RGBA{A: 255})
 
