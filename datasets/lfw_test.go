@@ -47,7 +47,7 @@ func TestLFWEvaluation(t *testing.T) {
 		t.SkipNow()
 	}
 
-	extractor, err := faceapi.NewDefaultExtractor("..")
+	extractor, err := faceapi.NewDefaultExtractor("../faceapi")
 	require.NoError(t, err)
 
 	descrs, err := extract(extractor, "lfw_temp.json")
@@ -98,7 +98,7 @@ func TestLFWEvaluationOnSubset(t *testing.T) {
 		t.SkipNow()
 	}
 
-	extractor, err := faceapi.NewDefaultExtractor("..")
+	extractor, err := faceapi.NewDefaultExtractor("../faceapi")
 	require.NoError(t, err)
 
 	descrs, err := extract(extractor, "lfw_temp.json")
