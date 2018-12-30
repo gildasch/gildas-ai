@@ -31,8 +31,8 @@ func main() {
 
 	models := map[string]func(modelRoot string) (*imagenet.Model, func() error, error){
 		"xception": imagenet.NewXception,
-		"resnet":   imagenet.NewXception,
-		"nasnet":   imagenet.NewResnet,
+		"resnet":   imagenet.NewResnet,
+		"nasnet":   imagenet.NewNasnet,
 		"pnasnet":  imagenet.NewPnasnet,
 	}
 
