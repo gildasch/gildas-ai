@@ -6,6 +6,7 @@ import (
 	"image/draw"
 	"math"
 
+	"github.com/disintegration/imaging"
 	"github.com/pkg/errors"
 )
 
@@ -82,10 +83,40 @@ func drawPoint(img *image.RGBA, p image.Point) {
 }
 
 func (l *Landmarks) Center(cropped, full image.Image) image.Image {
-	bounds := full.Bounds()
+	onImage := l.PointsOnImage(cropped)
+
+	noseTopX, noseTopY := float64(onImage[27].X), float64(onImage[27].Y)
+	chinBottomX, chinBottomY := float64(onImage[8].X), float64(onImage[8].Y)
+	dx := noseTopX - chinBottomX
+	dy := noseTopY - chinBottomY
+	var angle float64
+
+	switch {
+	case dx == 0:
+		angle = 0
+	case dy == 0 && dx > 0:
+		angle = -90
+	case dy == 0 && dx < 0:
+		angle = 90
+	case dx/dy > 0:
+		angle = -math.Atan(dx/dy) * 180 / math.Pi
+	default:
+		angle = math.Atan(dx/dy) * 180 / math.Pi
+	}
+	rotated := imaging.Rotate(full, angle, color.RGBA{A: 255})
+
+	bounds := rotated.Bounds()
 	minX, minY, maxX, maxY := bounds.Max.X, bounds.Max.Y, bounds.Min.X, bounds.Min.Y
 
-	for _, p := range l.PointsOnImage(cropped) {
+	for _, p := range rotatePoints(angle,
+		full.Bounds().Dx(), full.Bounds().Dy(),
+		rotated.Bounds().Dx(), rotated.Bounds().Dy(), []image.Point{
+			onImage[0],  // right chin top
+			onImage[8],  // chin bottom
+			onImage[16], // left chin top
+			onImage[19], // right eyebrow top
+			onImage[24], // left eyebrow top
+		}) {
 		if p.X < minX {
 			minX = p.X
 		}
@@ -102,12 +133,12 @@ func (l *Landmarks) Center(cropped, full image.Image) image.Image {
 
 	rect := image.Rectangle{
 		Min: image.Point{
-			X: minX,
-			Y: minY,
+			X: int(float64(minX) / 1.1),
+			Y: int(float64(minY) / 1.1),
 		},
 		Max: image.Point{
-			X: maxX,
-			Y: maxY,
+			X: int(float64(maxX) * 1.1),
+			Y: int(float64(maxY) * 1.1),
 		},
 	}
 
@@ -116,9 +147,30 @@ func (l *Landmarks) Center(cropped, full image.Image) image.Image {
 
 	out := image.NewRGBA(rect)
 
-	draw.Draw(out, out.Bounds(), full, rect.Min, draw.Src)
+	draw.Draw(out, out.Bounds(), rotated, rect.Min, draw.Src)
 
 	return out
+}
+
+func rotatePoints(angle float64, srcWidth, srcHeight, dstWidth, dstHeight int, points []image.Point) []image.Point {
+	sin, cos := math.Sincos(-math.Pi * angle / 180)
+
+	srcXOff := float64(srcWidth)/2 - 0.5
+	srcYOff := float64(srcHeight)/2 - 0.5
+	dstXOff := float64(dstWidth)/2 - 0.5
+	dstYOff := float64(dstHeight)/2 - 0.5
+
+	var rotated []image.Point
+	for _, p := range points {
+		x := float64(p.X) - srcXOff
+		y := float64(p.Y) - srcYOff
+		rotated = append(rotated, image.Point{
+			X: int(x*cos - y*sin + dstXOff),
+			Y: int(x*sin + y*cos + dstYOff),
+		})
+	}
+
+	return rotated
 }
 
 func square(rect image.Rectangle) image.Rectangle {

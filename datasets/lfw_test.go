@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	threshold           = 0.62
+	threshold           = 0.61
 	minimumMatchTest    = 2000
 	minimumNonMatchTest = 10000
 )
