@@ -11,6 +11,10 @@ import (
 )
 
 func TestXception(t *testing.T) {
+	if tfVersion() == "1.12.0" {
+		t.SkipNow()
+	}
+
 	var modelsRoot = os.Getenv("MODELS_ROOT")
 	if modelsRoot == "" {
 		modelsRoot = "../"
