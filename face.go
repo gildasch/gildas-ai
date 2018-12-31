@@ -131,12 +131,12 @@ func (l *Landmarks) Center(cropped, full image.Image) image.Image {
 
 	rect := image.Rectangle{
 		Min: image.Point{
-			X: int(float64(minX) / 1.1),
-			Y: int(float64(minY) / 1.1),
+			X: int(float64(minX) - 10),
+			Y: int(float64(minY) - 10),
 		},
 		Max: image.Point{
-			X: int(float64(maxX) * 1.1),
-			Y: int(float64(maxY) * 1.1),
+			X: int(float64(maxX) + 10),
+			Y: int(float64(maxY) + 10),
 		},
 	}
 
