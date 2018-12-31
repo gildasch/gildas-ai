@@ -269,56 +269,57 @@ type Extractor struct {
 }
 
 func (e *Extractor) Extract(img image.Image) ([]image.Image, []Descriptors, error) {
-	allDetections, err := e.Detector.Detect(img)
+	_, _, _, _, centered, descrs, err := e.extract(img, 0.6, none)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error detecting faces")
+		return nil, nil, err
 	}
 
-	detections := Above(allDetections, 0.6)
-
-	images := []image.Image{}
-	descrs := []Descriptors{}
-	for _, d := range detections {
-		if d.Box.Dx() < 45 || d.Box.Dy() < 45 {
-			continue // face is too small
-		}
-
-		cropped := image.NewRGBA(d.Box)
-		draw.Draw(cropped, d.Box, img, d.Box.Min, draw.Src)
-
-		landmarks, err := e.Landmark.Detect(cropped)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "error detecting landmarks")
-		}
-
-		cropped2 := landmarks.Center(cropped, img)
-
-		descriptors, err := e.Descriptor.Compute(cropped2)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "error computing descriptors")
-		}
-
-		images = append(images, cropped2)
-		descrs = append(descrs, descriptors)
-	}
-
-	return images, descrs, nil
+	return centered, descrs, nil
 }
 
 func (e *Extractor) ExtractLandmarks(img image.Image) ([][]image.Point, []image.Image, error) {
+	_, cropped, _, landmarksOnImages, _, _, err := e.extract(img, 0.4, skipCenter)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return landmarksOnImages, cropped, nil
+}
+
+func (e *Extractor) ExtractPrimitives(img image.Image) ([]Detection, []Landmarks, []Descriptors, error) {
+	detections, _, landmarks, _, _, descrs, err := e.extract(img, 0.6, none)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return detections, landmarks, descrs, nil
+}
+
+const (
+	none = iota
+	skipCenter
+	skipDescriptors
+)
+
+func (e *Extractor) extract(img image.Image, detectionThreshold float32, skip int) (
+	detections []Detection,
+	croppedCollection []image.Image,
+	landmarksCollection []Landmarks,
+	landmarksOnImages [][]image.Point,
+	centeredCollection []image.Image,
+	descriptorsCollection []Descriptors,
+	err error) {
 	allDetections, err := e.Detector.Detect(img)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error detecting faces")
+		return nil, nil, nil, nil, nil, nil, errors.Wrap(err, "error detecting faces")
 	}
 
-	detections := Above(allDetections, 0.4)
+	detections = Above(allDetections, detectionThreshold)
 
 	if len(detections) == 0 {
-		return nil, nil, errors.New("no face detected")
+		return nil, nil, nil, nil, nil, nil, errors.New("no face detected")
 	}
 
-	var ret [][]image.Point
-	var crops []image.Image
 	for _, d := range detections {
 		if d.Box.Dx() < 45 || d.Box.Dy() < 45 {
 			continue // face is too small
@@ -326,15 +327,38 @@ func (e *Extractor) ExtractLandmarks(img image.Image) ([][]image.Point, []image.
 
 		cropped := image.NewRGBA(d.Box)
 		draw.Draw(cropped, d.Box, img, d.Box.Min, draw.Src)
+		croppedCollection = append(croppedCollection, cropped)
 
 		landmarks, err := e.Landmark.Detect(cropped)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "error detecting landmarks")
+			return nil, nil, nil, nil, nil, nil, errors.Wrap(err, "error detecting landmarks")
+		}
+		landmarksCollection = append(landmarksCollection, *landmarks)
+		landmarksOnImages = append(landmarksOnImages, landmarks.PointsOnImage(cropped))
+
+		if skip == skipCenter {
+			continue
 		}
 
-		ret = append(ret, landmarks.PointsOnImage(cropped))
-		crops = append(crops, cropped)
+		centered := landmarks.Center(cropped, img)
+		centeredCollection = append(centeredCollection, centered)
+
+		if skip == skipDescriptors {
+			continue
+		}
+
+		descriptors, err := e.Descriptor.Compute(centered)
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, errors.Wrap(err, "error computing descriptors")
+		}
+
+		descriptorsCollection = append(descriptorsCollection, descriptors)
 	}
 
-	return ret, crops, nil
+	return detections,
+		croppedCollection,
+		landmarksCollection,
+		landmarksOnImages,
+		centeredCollection,
+		descriptorsCollection, nil
 }
