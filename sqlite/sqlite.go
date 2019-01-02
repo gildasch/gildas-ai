@@ -205,7 +205,49 @@ values ($1, $2, $3, $4, $5)`,
 	return nil
 }
 
-func (c *Store) GetFaces() ([]*gildasai.FaceItem, error) {
+func (c *Store) GetFaces(id string) ([]*gildasai.FaceItem, bool, error) {
+	rows, err := c.Query(`
+select id, network, detection, landmarks, descriptors
+from faces
+where id = $1`, id)
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+
+	var items []*gildasai.FaceItem
+	for rows.Next() {
+		var item gildasai.FaceItem
+		var detection, landmarks, descriptors string
+		err = rows.Scan(&item.Identifier, &item.Network, &detection, &landmarks, &descriptors)
+		if err != nil {
+			return nil, false, err
+		}
+
+		err = json.Unmarshal([]byte(detection), &item.Detection)
+		if err != nil {
+			return nil, false, err
+		}
+		err = json.Unmarshal([]byte(landmarks), &item.Landmarks)
+		if err != nil {
+			return nil, false, err
+		}
+		err = json.Unmarshal([]byte(descriptors), &item.Descriptors)
+		if err != nil {
+			return nil, false, err
+		}
+
+		items = append(items, &item)
+	}
+
+	if len(items) == 0 {
+		return nil, false, nil
+	}
+
+	return items, true, nil
+}
+
+func (c *Store) GetAllFaces() ([]*gildasai.FaceItem, error) {
 	rows, err := c.Query(`
 select id, network, detection, landmarks, descriptors
 from faces`)

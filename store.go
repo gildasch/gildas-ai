@@ -20,6 +20,7 @@ type FaceItem struct {
 }
 
 type FaceStore interface {
-	StoreFace(id string, item *FaceItem) error
-	GetFaces() (*FaceItem, bool, error)
+	StoreFace(item *FaceItem) error
+	GetFaces(id string) ([]*FaceItem, bool, error)
+	GetAllFaces() ([]*FaceItem, error)
 }
