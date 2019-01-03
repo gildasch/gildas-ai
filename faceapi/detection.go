@@ -84,7 +84,7 @@ func (d *Detector) Detect(img image.Image) ([]gildasai.Detection, error) {
 	classes := classBatches[0]
 
 	numDetectionsBatches, ok := result[3].Value().([]float32)
-	if !ok || len(classBatches) < 1 {
+	if !ok || len(numDetectionsBatches) < 1 {
 		return nil, errors.New("num_detections has unexprected shape")
 	}
 	numDetections := int(numDetectionsBatches[0])
