@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/disintegration/imaging"
 	"github.com/nfnt/resize"
@@ -19,6 +20,10 @@ import (
 )
 
 func FromFile(filename string) (image.Image, error) {
+	if !hasImageExtention(filename) {
+		return nil, errors.Errorf("file %q has unknown extension", filename)
+	}
+
 	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -150,4 +155,16 @@ func getOrientation(r io.Reader) string {
 	}
 
 	return "1"
+}
+
+func hasImageExtention(filename string) bool {
+	filename = strings.ToLower(filename)
+
+	for _, ext := range []string{"jpg", "jpeg", "png", "gif", "bmp"} {
+		if strings.HasSuffix(filename, ext) {
+			return true
+		}
+	}
+
+	return false
 }
