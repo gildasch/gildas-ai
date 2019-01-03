@@ -23,6 +23,7 @@ func FromFile(filename string) (image.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
 	img, _, err := Decode(f)
 	if err != nil {
