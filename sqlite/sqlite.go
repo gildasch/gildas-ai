@@ -183,15 +183,15 @@ limit $3`, n)
 func (c *Store) StoreFace(item *gildasai.FaceItem) error {
 	detection, err := json.Marshal(item.Detection)
 	if err != nil {
-		return nil
+		return err
 	}
 	landmarks, err := json.Marshal(item.Landmarks)
 	if err != nil {
-		return nil
+		return err
 	}
 	descriptors, err := json.Marshal(item.Descriptors)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	_, err = c.Exec(`
