@@ -319,16 +319,18 @@ func (e *Extractor) extract(img image.Image, detectionThreshold float32, skip in
 		return nil, nil, nil, nil, nil, nil, errors.Wrap(err, "error detecting faces")
 	}
 
-	detections = Above(allDetections, detectionThreshold)
+	detectionsOverThresholds := Above(allDetections, detectionThreshold)
 
-	if len(detections) == 0 {
+	if len(detectionsOverThresholds) == 0 {
 		return nil, nil, nil, nil, nil, nil, ErrNoFaceDetected
 	}
 
-	for _, d := range detections {
+	for _, d := range detectionsOverThresholds {
 		if d.Box.Dx() < 45 || d.Box.Dy() < 45 {
 			continue // face is too small
 		}
+
+		detections = append(detections, d)
 
 		cropped := image.NewRGBA(d.Box)
 		draw.Draw(cropped, d.Box, img, d.Box.Min, draw.Src)
