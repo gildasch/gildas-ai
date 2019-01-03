@@ -10,6 +10,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	ErrNoFaceDetected = errors.New("no face detected")
+)
+
 type Detection struct {
 	Box   image.Rectangle
 	Score float32
@@ -263,6 +267,7 @@ type Descriptor interface {
 }
 
 type Extractor struct {
+	Network    string
 	Detector   Detector
 	Landmark   Landmark
 	Descriptor Descriptor
@@ -317,7 +322,7 @@ func (e *Extractor) extract(img image.Image, detectionThreshold float32, skip in
 	detections = Above(allDetections, detectionThreshold)
 
 	if len(detections) == 0 {
-		return nil, nil, nil, nil, nil, nil, errors.New("no face detected")
+		return nil, nil, nil, nil, nil, nil, ErrNoFaceDetected
 	}
 
 	for _, d := range detections {

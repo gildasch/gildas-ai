@@ -19,6 +19,7 @@ func NewDefaultExtractor(modelRoot string) (*gildasai.Extractor, error) {
 	}
 
 	return &gildasai.Extractor{
+		Network:    "face-api-js",
 		Detector:   detector,
 		Landmark:   landmark,
 		Descriptor: descriptor,
