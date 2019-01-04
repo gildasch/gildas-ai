@@ -1,0 +1,28 @@
+<html>
+  <head>
+    <style>
+      .items li {
+          list-style-type: none;
+          border: 2px solid black;
+      }
+      img {
+          width: 100px;
+          height: 100px;
+      }
+    </style>
+  </head>
+  <body>
+    <ul class='items'>
+      {{ range $i, $match := .Matches }}
+      <li>
+        <img src="/facesearch/{{ $i }}/cropped.jpg" />
+        Confiance : {{ $match.Score }}<br />
+        {{ range $j, $distance := $match.Distances }}
+        {{ $distance }} / Confiance {{ index $match.Scores $j }}
+        <img src="/facesearch/{{ $i }}/matches/{{ $j }}/cropped.jpg" />
+        {{ end }}
+      </li>
+      {{ end }}
+    </ul>
+  </body>
+</html>

@@ -88,7 +88,8 @@ func main() {
 			"templates/faces.html",
 			"templates/photos.html",
 			"templates/faceswap.html",
-			"templates/masks.html")
+			"templates/masks.html",
+			"templates/facesearch.html")
 		app.GET("/", func(c *gin.Context) {
 			c.HTML(http.StatusOK, "index.html", nil)
 		})
@@ -120,6 +121,10 @@ func main() {
 		masksStore := map[string]api.MaskResult{}
 		app.GET("/masks", api.MaskHandler(maskDetector, masksStore))
 		app.GET("/masks/result.jpg", api.MaskImageHandler(masksStore))
+
+		app.GET("/facesearch", api.FacesearchHandler(sqliteStore))
+		app.GET("/facesearch/:face/cropped.jpg", api.FacesearchImageHandler())
+		app.GET("/facesearch/:face/matches/:match/cropped.jpg", api.FacesearchImageMatchHandler())
 
 		app.Run()
 	}
