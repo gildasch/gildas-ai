@@ -50,6 +50,24 @@ create table if not exists faces (
 		return nil, errors.Wrapf(err, "error running the SQL for DB creation %q\n", createFaceDBStmt)
 	}
 
+	createFaceDistancesDBStmt := `
+create table if not exists face_distances (
+    id1         text not null,
+    network1    text not null,
+    detection1  text not null,
+    id2         text not null,
+    network2    text not null,
+    detection2  text not null,
+    distance    real not null,
+    created     timestamp default CURRENT_TIMESTAMP,
+    primary key (id1, network1, detection1, id2, network2, detection2)
+)
+	`
+	_, err = db.Exec(createFaceDistancesDBStmt)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error running the SQL for DB creation %q\n", createFaceDBStmt)
+	}
+
 	return &Store{db}, nil
 }
 
@@ -282,4 +300,59 @@ from faces`)
 	}
 
 	return items, nil
+}
+
+func (c *Store) StoreFaceDistance(item1, item2 *gildasai.FaceItem, distance float32) error {
+	detection1, err := json.Marshal(item1.Detection)
+	if err != nil {
+		return err
+	}
+	detection2, err := json.Marshal(item2.Detection)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.Exec(`
+insert into face_distances(id1, network1, detection1, id2, network2, detection2, distance)
+values ($1, $2, $3, $4, $5, $6, $7)`,
+		item1.Identifier, item1.Network, string(detection1),
+		item2.Identifier, item2.Network, string(detection2), distance)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Store) GetFaceDistance(item1, item2 *gildasai.FaceItem) (float32, bool, error) {
+	detection1, err := json.Marshal(item1.Detection)
+	if err != nil {
+		return 0, false, err
+	}
+	detection2, err := json.Marshal(item2.Detection)
+	if err != nil {
+		return 0, false, err
+	}
+
+	var distance float32
+	err = c.QueryRow(`
+select distance
+from face_distances
+where
+  id1       = $1 and
+  network1  = $2 and
+  detection1 = $3 and
+  id2       = $4 and
+  network2  = $5 and
+  detection2 = $6`,
+		item1.Identifier, item1.Network, string(detection1),
+		item2.Identifier, item2.Network, string(detection2)).Scan(&distance)
+	if err == sql.ErrNoRows {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, err
+	}
+
+	return distance, true, nil
 }

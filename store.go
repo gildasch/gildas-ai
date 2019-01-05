@@ -24,3 +24,8 @@ type FaceStore interface {
 	GetFaces(id string) ([]*FaceItem, bool, error)
 	GetAllFaces() ([]*FaceItem, error)
 }
+
+type FaceDistanceStore interface {
+	StoreFaceDistance(item1, item2 *FaceItem, distance float32) error
+	GetFaceDistance(item1, item2 *FaceItem) (float32, bool, error)
+}
