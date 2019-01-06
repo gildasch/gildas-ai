@@ -92,6 +92,8 @@ where id = $1 and network = $2 and detection = $3
 
 type detection struct {
 	DetectionID string
+	Score       float32
+	Class       float32
 	Matches     int
 	AvgDistance float32
 }
@@ -125,8 +127,16 @@ limit 100
 			return nil, err
 		}
 
+		var d gildasai.Detection
+		err = json.Unmarshal([]byte(detectionJSON), &d)
+		if err != nil {
+			return nil, err
+		}
+
 		detections = append(detections, detection{
 			DetectionID: makeDetectionID(id, network, detectionJSON),
+			Score:       d.Score,
+			Class:       d.Class,
 			Matches:     matches,
 			AvgDistance: avgDistance,
 		})

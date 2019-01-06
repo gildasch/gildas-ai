@@ -17,6 +17,8 @@
       <li>
         <img src="/facesearch/{{ $detection.DetectionID }}/detection.jpg" />
         <img src="/facesearch/{{ $detection.DetectionID }}/landmarks.jpg" />
+        Score: {{ $detection.Score }} //
+        Class: {{ $detection.Class }} //
         Matches: {{ $detection.Matches }} //
         Avg. distance: {{ $detection.AvgDistance }}
       </li>
