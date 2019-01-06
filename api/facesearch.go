@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	threshold = 0.42
+	threshold = 0.45
 )
 
 func FacesearchHandler(store *sqlite.Store) gin.HandlerFunc {
@@ -46,6 +46,33 @@ func FacesearchDetectionHandler(store *sqlite.Store) gin.HandlerFunc {
 		}
 
 		detections, err := findMatches(store, id, network, detectionJSON)
+		if err != nil {
+			fmt.Println(err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		c.HTML(http.StatusOK, "facesearch.html", gin.H{
+			"Detections": detections,
+		})
+	}
+}
+
+func FacesearchAgainstHandler(store *sqlite.Store) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id1, network1, detectionJSON1, err := readDetectionID(c.Param("detection"))
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		id2, network2, detectionJSON2, err := readDetectionID(c.Param("detection2"))
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		detections, err := against(store, id1, network1, detectionJSON1, id2, network2, detectionJSON2)
 		if err != nil {
 			fmt.Println(err)
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -216,6 +243,56 @@ order by avg_distance
 	}
 
 	return detections, nil
+}
+
+func against(store *sqlite.Store, id1, network1, detectionJSON1, id2, network2, detectionJSON2 string) ([]detection, error) {
+	var descrsJSON1 string
+	err := store.QueryRow(`
+select descriptors
+from faces
+where id = $1 and network = $2 and detection = $3
+`, id1, network1, detectionJSON1).Scan(&descrsJSON1)
+	if err != nil {
+		return nil, err
+	}
+	var descrs1 gildasai.Descriptors
+	err = json.Unmarshal([]byte(descrsJSON1), &descrs1)
+	if err != nil {
+		return nil, err
+	}
+
+	var descrsJSON2 string
+	err = store.QueryRow(`
+select descriptors
+from faces
+where id = $1 and network = $2 and detection = $3
+`, id2, network2, detectionJSON2).Scan(&descrsJSON2)
+	if err != nil {
+		return nil, err
+	}
+	var descrs2 gildasai.Descriptors
+	err = json.Unmarshal([]byte(descrsJSON2), &descrs2)
+	if err != nil {
+		return nil, err
+	}
+
+	distance, err := descrs1.DistanceTo(descrs2)
+	if err != nil {
+		return nil, err
+	}
+
+	return []detection{
+		{
+			DetectionID: makeDetectionID(id1, network1, detectionJSON1),
+			ID:          id1,
+			Distance:    distance,
+		},
+		{
+			DetectionID: makeDetectionID(id2, network2, detectionJSON2),
+			ID:          id2,
+			Distance:    distance,
+		},
+	}, nil
 }
 
 func makeDetectionID(id, network, detectionJSON string) string {
