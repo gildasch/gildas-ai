@@ -115,6 +115,7 @@ type detection struct {
 	DetectionID string
 	Score       float32
 	Class       float32
+	ID          string
 	Matches     int
 	AvgDistance float32
 	Distance    float32
@@ -125,9 +126,8 @@ func findBestMatches(store *sqlite.Store) ([]detection, error) {
 select id, network, detection, count(*) as matches, avg(distance) as avg_distance
 from faces
   join face_distances on (
-    (id = id1 or id = id2)
-    and (network = network1 or network = network2)
-    and (detection = detection1 or detection = detection2))
+    (id = id1 and network = network1 and detection = detection1)
+    or (id = id2 and network = network2 and detection = detection2))
 where distance != 0
   and distance < $1
 group by id, network, detection
@@ -157,6 +157,7 @@ limit 500
 
 		detections = append(detections, detection{
 			DetectionID: makeDetectionID(id, network, detectionJSON),
+			ID:          id,
 			Score:       d.Score,
 			Class:       d.Class,
 			Matches:     matches,
@@ -164,7 +165,7 @@ limit 500
 		})
 	}
 
-	return detections[400:], nil
+	return detections, nil
 }
 
 func findMatches(store *sqlite.Store, id, network, detectionJSON string) ([]detection, error) {
@@ -173,17 +174,17 @@ select id, network, detection, 0
 from faces
 where id = $1 and network = $2 and detection = $3
 union all
-select id, network, detection, distance
+select id, network, detection, avg(distance) as avg_distance
 from faces
   join face_distances on (
-    (id = id1 or id = id2)
-    and (network = network1 or network = network2)
-    and (detection = detection1 or detection = detection2))
+    (id = id1 and network = network1 and detection = detection1)
+    or (id = id2 and network = network2 and detection = detection2))
 where (id1 = $1 or id2 = $1)
   and (network1 = $2 or network2 = $2)
   and (detection1 = $3 or detection2 = $3)
   and distance < $4
-order by distance
+group by id, network, detection
+order by avg_distance
 `, id, network, detectionJSON, threshold)
 	if err != nil {
 		return nil, err
@@ -207,6 +208,7 @@ order by distance
 
 		detections = append(detections, detection{
 			DetectionID: makeDetectionID(id, network, detectionJSON),
+			ID:          id,
 			Score:       d.Score,
 			Class:       d.Class,
 			Distance:    distance,

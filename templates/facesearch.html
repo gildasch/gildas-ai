@@ -17,6 +17,7 @@
       <li>
         <img src="/facesearch/{{ $detection.DetectionID }}/detection.jpg" />
         <img src="/facesearch/{{ $detection.DetectionID }}/landmarks.jpg" />
+        File: {{ $detection.ID }} //
         Score: {{ $detection.Score }} //
         Class: {{ $detection.Class }} //
         <a href='/facesearch/{{ $detection.DetectionID }}/matches'>Matches: {{ $detection.Matches }}</a> //
