@@ -38,6 +38,39 @@ type Landmarks struct {
 	Coords []float32
 }
 
+const (
+	minXCover = 0.6
+	minYCover = 0.6
+)
+
+func (l *Landmarks) Confidence() float32 {
+	if len(l.Coords) < 2 {
+		return 0
+	}
+
+	minX, maxX := l.Coords[0], l.Coords[0]
+	minY, maxY := l.Coords[1], l.Coords[1]
+	for i := 2; i < len(l.Coords)-1; i += 2 {
+		if l.Coords[i] < minX {
+			minX = l.Coords[i]
+		}
+		if l.Coords[i] > maxX {
+			maxX = l.Coords[i]
+		}
+		if l.Coords[i+1] < minY {
+			minY = l.Coords[i+1]
+		}
+		if l.Coords[i+1] > maxY {
+			maxY = l.Coords[i+1]
+		}
+	}
+
+	if maxX-minX < minXCover || maxY-minY < minYCover {
+		return 0
+	}
+	return 1
+}
+
 func (l *Landmarks) PointsOnImage(img image.Image) []image.Point {
 	w, h := float32(img.Bounds().Dx()), float32(img.Bounds().Dy())
 	minX, minY := img.Bounds().Min.X, img.Bounds().Min.Y
@@ -61,6 +94,16 @@ func (l *Landmarks) DrawOnImage(img image.Image) image.Image {
 	for i, p := range l.PointsOnImage(img) {
 		drawPoint(out, p, colorful.Hsv(float64(i)*360/68, 1, 0.6))
 	}
+
+	conf := l.Confidence()
+	drawPoint(out, img.Bounds().Min.Add(image.Point{4, 4}), color.RGBA{
+		R: uint8(255 - 255*conf),
+		G: uint8(255 * conf),
+	})
+	drawPoint(out, img.Bounds().Max.Sub(image.Point{4, 4}), color.RGBA{
+		R: uint8(255 - 255*conf),
+		G: uint8(255 * conf),
+	})
 
 	return out
 }
