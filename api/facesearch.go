@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	threshold = 0.37
+	threshold = 0.42
 )
 
 func FacesearchHandler(store *sqlite.Store) gin.HandlerFunc {
@@ -31,6 +31,27 @@ func FacesearchHandler(store *sqlite.Store) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
+		c.HTML(http.StatusOK, "facesearch.html", gin.H{
+			"Detections": detections,
+		})
+	}
+}
+
+func FacesearchDetectionHandler(store *sqlite.Store) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id, network, detectionJSON, err := readDetectionID(c.Param("detection"))
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		detections, err := findMatches(store, id, network, detectionJSON)
+		if err != nil {
+			fmt.Println(err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
 		c.HTML(http.StatusOK, "facesearch.html", gin.H{
 			"Detections": detections,
 		})
@@ -96,6 +117,7 @@ type detection struct {
 	Class       float32
 	Matches     int
 	AvgDistance float32
+	Distance    float32
 }
 
 func findBestMatches(store *sqlite.Store) ([]detection, error) {
@@ -110,7 +132,7 @@ where distance != 0
   and distance < $1
 group by id, network, detection
 order by matches desc, avg_distance
-limit 100
+limit 500
 `, threshold)
 	if err != nil {
 		return nil, err
@@ -139,6 +161,55 @@ limit 100
 			Class:       d.Class,
 			Matches:     matches,
 			AvgDistance: avgDistance,
+		})
+	}
+
+	return detections[400:], nil
+}
+
+func findMatches(store *sqlite.Store, id, network, detectionJSON string) ([]detection, error) {
+	rows, err := store.Query(`
+select id, network, detection, 0
+from faces
+where id = $1 and network = $2 and detection = $3
+union all
+select id, network, detection, distance
+from faces
+  join face_distances on (
+    (id = id1 or id = id2)
+    and (network = network1 or network = network2)
+    and (detection = detection1 or detection = detection2))
+where (id1 = $1 or id2 = $1)
+  and (network1 = $2 or network2 = $2)
+  and (detection1 = $3 or detection2 = $3)
+  and distance < $4
+order by distance
+`, id, network, detectionJSON, threshold)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var detections []detection
+	for rows.Next() {
+		var id, network, detectionJSON string
+		var distance float32
+		err := rows.Scan(&id, &network, &detectionJSON, &distance)
+		if err != nil {
+			return nil, err
+		}
+
+		var d gildasai.Detection
+		err = json.Unmarshal([]byte(detectionJSON), &d)
+		if err != nil {
+			return nil, err
+		}
+
+		detections = append(detections, detection{
+			DetectionID: makeDetectionID(id, network, detectionJSON),
+			Score:       d.Score,
+			Class:       d.Class,
+			Distance:    distance,
 		})
 	}
 

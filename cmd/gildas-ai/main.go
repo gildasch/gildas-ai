@@ -123,6 +123,7 @@ func main() {
 		app.GET("/masks/result.jpg", api.MaskImageHandler(masksStore))
 
 		app.GET("/facesearch", api.FacesearchHandler(sqliteStore))
+		app.GET("/facesearch/:detection/matches", api.FacesearchDetectionHandler(sqliteStore))
 		app.GET("/facesearch/:detection/detection.jpg", api.FacesearchDetectionImageHandler())
 		app.GET("/facesearch/:detection/landmarks.jpg", api.FacesearchLandmarkImageHandler(sqliteStore))
 
