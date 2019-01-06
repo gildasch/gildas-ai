@@ -39,11 +39,11 @@ func main() {
 
 	total := len(faceItems)
 	for i1, fi1 := range faceItems {
-		if len(fi1.Descriptors) == 0 {
+		if len(fi1.Descriptors) == 0 || fi1.Detection.Score < 0.9 || fi1.Landmarks.Confidence() < 0.5 {
 			continue
 		}
 		for i2, fi2 := range faceItems[i1+1:] {
-			if len(fi2.Descriptors) == 0 {
+			if len(fi2.Descriptors) == 0 || fi2.Detection.Score < 0.9 || fi2.Landmarks.Confidence() < 0.5 {
 				continue
 			}
 			fmt.Printf("\rprogress: %d/%d (distance with: %d/%d)", i1, total, i2, total)
