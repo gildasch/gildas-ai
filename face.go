@@ -7,6 +7,7 @@ import (
 	"math"
 
 	"github.com/disintegration/imaging"
+	colorful "github.com/lucasb-eyer/go-colorful"
 	"github.com/pkg/errors"
 )
 
@@ -57,8 +58,8 @@ func (l *Landmarks) DrawOnImage(img image.Image) image.Image {
 
 	draw.Draw(out, img.Bounds(), img, image.ZP, draw.Src)
 
-	for _, p := range l.PointsOnImage(img) {
-		drawPoint(out, p)
+	for i, p := range l.PointsOnImage(img) {
+		drawPoint(out, p, colorful.Hsv(float64(i)*360/68, 1, 0.6))
 	}
 
 	return out
@@ -70,18 +71,18 @@ func (l *Landmarks) DrawOnFullImage(cropped, full image.Image) image.Image {
 	draw.Draw(out, full.Bounds(), full, image.ZP, draw.Src)
 
 	for _, p := range l.PointsOnImage(cropped) {
-		drawPoint(out, p)
+		drawPoint(out, p, color.RGBA{G: 255})
 	}
 
 	return out
 }
 
-func drawPoint(img *image.RGBA, p image.Point) {
-	width := 3
+func drawPoint(img *image.RGBA, p image.Point, c color.Color) {
+	width := 4
 
 	for i := p.X - width/2; i < p.X+width/2; i++ {
 		for j := p.Y - width/2; j < p.Y+width/2; j++ {
-			img.Set(i, j, color.RGBA{G: 255})
+			img.Set(i, j, c)
 		}
 	}
 }
