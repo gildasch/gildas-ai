@@ -13,17 +13,29 @@
   </head>
   <body>
     <ul class='items'>
-      {{ range $detection := .Detections }}
+      {{ range $cluster := .Clusters }}
+      <li>
+        <img src="/facesearch/{{ $cluster.DetectionID }}/detection.jpg" />
+        <img src="/facesearch/{{ $cluster.DetectionID }}/landmarks.jpg" />
+        File: {{ $cluster.ID }} //
+        Score: {{ $cluster.Score }} //
+        Class: {{ $cluster.Class }} //
+        <a href='/facesearch/{{ $cluster.DetectionID }}/matches'>Matches: {{ $cluster.Matches }}</a> //
+        Avg. distance: {{ $cluster.AvgDistance }} //
+        Distance: {{ $cluster.Distance }}
+      </li>
+      {{ if $.ShowAll }}
+      {{ range $detection := $cluster.Detections }}
       <li>
         <img src="/facesearch/{{ $detection.DetectionID }}/detection.jpg" />
         <img src="/facesearch/{{ $detection.DetectionID }}/landmarks.jpg" />
         File: {{ $detection.ID }} //
         Score: {{ $detection.Score }} //
         Class: {{ $detection.Class }} //
-        <a href='/facesearch/{{ $detection.DetectionID }}/matches'>Matches: {{ $detection.Matches }}</a> //
-        Avg. distance: {{ $detection.AvgDistance }} //
         Distance: {{ $detection.Distance }}
       </li>
+      {{ end }}
+      {{ end }}
       {{ end }}
     </ul>
   </body>

@@ -9,7 +9,6 @@ import (
 	"image"
 	"image/draw"
 	"image/jpeg"
-	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -21,43 +20,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	threshold = 0.40
-)
-
-func FacesearchHandler(store *sqlite.Store) gin.HandlerFunc {
-	detections, err := findBestMatches(store)
-	if err != nil {
-		log.Fatal("could not get best matches from store: ", err)
-	}
-
+func FacesearchHandler(store *sqlite.Store, clusters *FaceClusters) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if len(detections) > 100 {
-			detections = detections[:100]
-		}
 		c.HTML(http.StatusOK, "facesearch.html", gin.H{
-			"Detections": detections,
+			"Clusters": clusters.Best(100),
 		})
 	}
 }
 
-func FacesearchDetectionHandler(store *sqlite.Store) gin.HandlerFunc {
+func FacesearchDetectionHandler(store *sqlite.Store, clusters *FaceClusters) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id, network, detectionJSON, err := readDetectionID(c.Param("detection"))
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
-
-		detections, err := findMatches(store, id, network, detectionJSON)
-		if err != nil {
-			fmt.Println(err)
-			c.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
+		match := clusters.Find(c.Param("detection"))
 
 		c.HTML(http.StatusOK, "facesearch.html", gin.H{
-			"Detections": detections,
+			"Clusters": []*Matches{match},
+			"ShowAll":  true,
 		})
 	}
 }
@@ -76,7 +53,7 @@ func FacesearchAgainstHandler(store *sqlite.Store) gin.HandlerFunc {
 			return
 		}
 
-		detections, err := against(store, id1, network1, detectionJSON1, id2, network2, detectionJSON2)
+		match, err := against(store, id1, network1, detectionJSON1, id2, network2, detectionJSON2)
 		if err != nil {
 			fmt.Println(err)
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -84,7 +61,8 @@ func FacesearchAgainstHandler(store *sqlite.Store) gin.HandlerFunc {
 		}
 
 		c.HTML(http.StatusOK, "facesearch.html", gin.H{
-			"Detections": detections,
+			"Clusters": []*Matches{match},
+			"ShowAll":  true,
 		})
 	}
 }
@@ -142,22 +120,60 @@ where id = $1 and network = $2 and detection = $3
 	}
 }
 
-type detection struct {
+const (
+	threshold = 0.35
+)
+
+type FaceClusters struct {
+	Clusters map[string]*Matches
+}
+
+func (fc *FaceClusters) Best(n int) []*Matches {
+	var l []*Matches
+	for _, m := range fc.Clusters {
+		l = append(l, m)
+	}
+	sort.Slice(l, func(i, j int) bool { return l[i].Matches > l[j].Matches })
+
+	if len(l) < n {
+		return l
+	}
+
+	return l[:n]
+}
+
+func (fc *FaceClusters) Find(detectionID string) *Matches {
+	for _, m := range fc.Clusters {
+		if detectionID == m.DetectionID {
+			return m
+		}
+
+		for _, d := range m.Detections {
+			if detectionID == d.DetectionID {
+				return m
+			}
+		}
+	}
+
+	return nil
+}
+
+type Detection struct {
 	DetectionID                string
 	ID, Network, DetectionJSON string
+	Distance                   float32
 	Score                      float32
 	Class                      float32
-	Matches                    int
-	AvgDistance                float32
-	Distance                   float32
 }
 
-type detectionsCluster struct {
-	Items   []*detection
-	whereIs map[string]int
+type Matches struct {
+	Detection
+	Matches     int
+	AvgDistance float32
+	Detections  []Detection
 }
 
-func findBestMatches(store *sqlite.Store) ([]detection, error) {
+func CalculateClusters(store *sqlite.Store) (*FaceClusters, error) {
 	rows, err := store.Query(`
 select id1, network1, detection1, id2, network2, detection2, distance
 from face_distances
@@ -169,8 +185,10 @@ order by distance
 	}
 	defer rows.Close()
 
-	var cluster detectionsCluster
-	cluster.whereIs = map[string]int{}
+	clusters := &FaceClusters{
+		Clusters: map[string]*Matches{},
+	}
+	whereIs := map[string]string{}
 	for rows.Next() {
 		var id1, network1, detectionJSON1 string
 		var id2, network2, detectionJSON2 string
@@ -186,8 +204,8 @@ order by distance
 		detectionID1 := makeDetectionID(id1, network1, detectionJSON1)
 		detectionID2 := makeDetectionID(id2, network2, detectionJSON2)
 
-		at1, ok1 := cluster.whereIs[detectionID1]
-		at2, ok2 := cluster.whereIs[detectionID2]
+		at1, ok1 := whereIs[detectionID1]
+		at2, ok2 := whereIs[detectionID2]
 
 		if ok1 && ok2 && at1 == at2 {
 			continue
@@ -195,153 +213,129 @@ order by distance
 
 		if distance > threshold {
 			if !ok1 {
-				cluster.Items = append(cluster.Items, &detection{
-					DetectionID:   detectionID1,
-					ID:            id1,
-					Network:       network1,
-					DetectionJSON: detectionJSON1,
-					Matches:       0,
-					AvgDistance:   0,
-				})
-				cluster.whereIs[detectionID1] = len(cluster.Items) - 1
+				clusters.Clusters[detectionID1] = &Matches{
+					Detection: Detection{
+						DetectionID:   detectionID1,
+						ID:            id1,
+						Network:       network1,
+						DetectionJSON: detectionJSON1,
+					},
+					Matches:     0,
+					AvgDistance: 0,
+				}
+				whereIs[detectionID1] = detectionID1
 			}
 
 			if !ok2 {
-				cluster.Items = append(cluster.Items, &detection{
-					DetectionID:   detectionID2,
-					ID:            id2,
-					Network:       network2,
-					DetectionJSON: detectionJSON2,
-					Matches:       0,
-					AvgDistance:   0,
-				})
-				cluster.whereIs[detectionID2] = len(cluster.Items) - 1
+				clusters.Clusters[detectionID2] = &Matches{
+					Detection: Detection{
+						DetectionID:   detectionID2,
+						ID:            id2,
+						Network:       network2,
+						DetectionJSON: detectionJSON2,
+					},
+					Matches:     0,
+					AvgDistance: 0,
+				}
+				whereIs[detectionID2] = detectionID2
 			}
 
 			continue
 		}
 
 		if !ok1 && !ok2 {
-			cluster.Items = append(cluster.Items, &detection{
-				DetectionID:   detectionID1,
-				ID:            id1,
-				Network:       network1,
-				DetectionJSON: detectionJSON1,
-				Matches:       1,
-				AvgDistance:   distance,
-			})
-			cluster.whereIs[detectionID1] = len(cluster.Items) - 1
-			cluster.whereIs[detectionID2] = len(cluster.Items) - 1
+			clusters.Clusters[detectionID1] = &Matches{
+				Detection: Detection{
+					DetectionID:   detectionID1,
+					ID:            id1,
+					Network:       network1,
+					DetectionJSON: detectionJSON1,
+				},
+				Matches:     1,
+				AvgDistance: distance,
+				Detections: []Detection{
+					{
+						DetectionID:   detectionID2,
+						ID:            id2,
+						Network:       network2,
+						DetectionJSON: detectionJSON2,
+						Distance:      distance,
+					},
+				},
+			}
+			whereIs[detectionID1] = detectionID1
+			whereIs[detectionID2] = detectionID1
 
 			continue
 		}
 
 		if !ok1 {
-			cluster.Items[at2].Matches++
-			cluster.Items[at2].AvgDistance += distance
-			cluster.whereIs[detectionID1] = at2
+			clusters.Clusters[at2].Matches++
+			clusters.Clusters[at2].AvgDistance += distance
+			clusters.Clusters[at2].Detections = append(clusters.Clusters[at2].Detections,
+				Detection{
+					DetectionID:   detectionID1,
+					ID:            id1,
+					Network:       network1,
+					DetectionJSON: detectionJSON1,
+					Distance:      distance,
+				})
+			whereIs[detectionID1] = at2
 
 			continue
 		}
 
 		if !ok2 {
-			cluster.Items[at1].Matches++
-			cluster.Items[at1].AvgDistance += distance
-			cluster.whereIs[detectionID2] = at1
+			clusters.Clusters[at1].Matches++
+			clusters.Clusters[at1].AvgDistance += distance
+			clusters.Clusters[at1].Detections = append(clusters.Clusters[at1].Detections,
+				Detection{
+					DetectionID:   detectionID2,
+					ID:            id2,
+					Network:       network2,
+					DetectionJSON: detectionJSON2,
+					Distance:      distance,
+				})
+			whereIs[detectionID2] = at1
 
 			continue
 		}
 
-		cluster.Items[at1].Matches += cluster.Items[at2].Matches + 1
-		cluster.Items[at1].AvgDistance += cluster.Items[at2].AvgDistance + distance
+		clusters.Clusters[at1].Matches += clusters.Clusters[at2].Matches + 1
+		clusters.Clusters[at1].AvgDistance += clusters.Clusters[at2].AvgDistance + distance
+		clusters.Clusters[at1].Detections = append(clusters.Clusters[at1].Detections,
+			Detection{
+				DetectionID:   detectionID2,
+				ID:            id2,
+				Network:       network2,
+				DetectionJSON: detectionJSON2,
+				Distance:      distance,
+			})
+		clusters.Clusters[at1].Detections = append(clusters.Clusters[at1].Detections,
+			clusters.Clusters[at2].Detections...)
+		whereIs[detectionID2] = at1
 
 		var toUpdate []string
-		for id, at := range cluster.whereIs {
+		for id, at := range whereIs {
 			if at == at2 {
-				toUpdate = append(toUpdate, id)
+				whereIs[id] = at1
 			}
 		}
 		for _, id := range toUpdate {
-			cluster.whereIs[id] = at1
+			whereIs[id] = at1
 		}
 
-		cluster.Items[at2] = nil
+		delete(clusters.Clusters, at2)
 	}
 
-	fmt.Println(len(cluster.Items))
-	fmt.Println(cluster.Items[:10])
-
-	var detections []detection
-	for _, d := range cluster.Items {
-		if d == nil {
-			continue
-		}
-
-		if d.Matches > 0 {
-			d.AvgDistance = d.AvgDistance / float32(d.Matches)
-		}
-
-		detections = append(detections, *d)
+	for _, m := range clusters.Clusters {
+		m.AvgDistance = m.AvgDistance / float32(m.Matches)
 	}
 
-	fmt.Println(len(detections))
-
-	sort.Slice(detections, func(i, j int) bool { return detections[i].Matches > detections[j].Matches })
-
-	return detections, nil
+	return clusters, nil
 }
 
-func findMatches(store *sqlite.Store, id, network, detectionJSON string) ([]detection, error) {
-	rows, err := store.Query(`
-select id, network, detection, 0
-from faces
-where id = $1 and network = $2 and detection = $3
-union all
-select id, network, detection, avg(distance) as avg_distance
-from faces
-  join face_distances on (
-    (id = id1 and network = network1 and detection = detection1)
-    or (id = id2 and network = network2 and detection = detection2))
-where (id1 = $1 or id2 = $1)
-  and (network1 = $2 or network2 = $2)
-  and (detection1 = $3 or detection2 = $3)
-  and distance < $4
-group by id, network, detection
-order by avg_distance
-`, id, network, detectionJSON, threshold)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var detections []detection
-	for rows.Next() {
-		var id, network, detectionJSON string
-		var distance float32
-		err := rows.Scan(&id, &network, &detectionJSON, &distance)
-		if err != nil {
-			return nil, err
-		}
-
-		var d gildasai.Detection
-		err = json.Unmarshal([]byte(detectionJSON), &d)
-		if err != nil {
-			return nil, err
-		}
-
-		detections = append(detections, detection{
-			DetectionID: makeDetectionID(id, network, detectionJSON),
-			ID:          id,
-			Score:       d.Score,
-			Class:       d.Class,
-			Distance:    distance,
-		})
-	}
-
-	return detections, nil
-}
-
-func against(store *sqlite.Store, id1, network1, detectionJSON1, id2, network2, detectionJSON2 string) ([]detection, error) {
+func against(store *sqlite.Store, id1, network1, detectionJSON1, id2, network2, detectionJSON2 string) (*Matches, error) {
 	var descrsJSON1 string
 	err := store.QueryRow(`
 select descriptors
@@ -377,16 +371,23 @@ where id = $1 and network = $2 and detection = $3
 		return nil, err
 	}
 
-	return []detection{
-		{
-			DetectionID: makeDetectionID(id1, network1, detectionJSON1),
-			ID:          id1,
-			Distance:    distance,
+	return &Matches{
+		Detection: Detection{
+			DetectionID:   makeDetectionID(id1, network1, detectionJSON1),
+			ID:            id1,
+			Network:       network1,
+			DetectionJSON: detectionJSON1,
 		},
-		{
-			DetectionID: makeDetectionID(id2, network2, detectionJSON2),
-			ID:          id2,
-			Distance:    distance,
+		Matches:     1,
+		AvgDistance: distance,
+		Detections: []Detection{
+			{
+				DetectionID:   makeDetectionID(id2, network2, detectionJSON2),
+				ID:            id2,
+				Network:       network2,
+				DetectionJSON: detectionJSON2,
+				Distance:      distance,
+			},
 		},
 	}, nil
 }

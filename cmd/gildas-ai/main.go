@@ -122,8 +122,13 @@ func main() {
 		app.GET("/masks", api.MaskHandler(maskDetector, masksStore))
 		app.GET("/masks/result.jpg", api.MaskImageHandler(masksStore))
 
-		app.GET("/facesearch", api.FacesearchHandler(sqliteStore))
-		app.GET("/facesearch/:detection/matches", api.FacesearchDetectionHandler(sqliteStore))
+		clusters, err := api.CalculateClusters(sqliteStore)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		app.GET("/facesearch", api.FacesearchHandler(sqliteStore, clusters))
+		app.GET("/facesearch/:detection/matches", api.FacesearchDetectionHandler(sqliteStore, clusters))
 		app.GET("/facesearch/:detection/against/:detection2", api.FacesearchAgainstHandler(sqliteStore))
 		app.GET("/facesearch/:detection/detection.jpg", api.FacesearchDetectionImageHandler())
 		app.GET("/facesearch/:detection/landmarks.jpg", api.FacesearchLandmarkImageHandler(sqliteStore))
